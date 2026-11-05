@@ -1,0 +1,861 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <title>My Billing</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.0/jspdf.umd.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+    <style>
+        :root {
+            --bg: #f8fafc;
+            --sidebar: #0f172a;
+            --sidebar-light: #1e293b;
+            --card: #ffffff;
+            --primary: #2563eb;
+            --primary-soft: #dbeafe;
+            --success: #16a34a;
+            --success-soft: #dcfce7;
+            --warning: #d97706;
+            --warning-soft: #fef3c7;
+            --danger: #dc2626;
+            --danger-soft: #fee2e2;
+            --text: #0f172a;
+            --muted: #64748b;
+            --line: #e2e8f0;
+        }
+        * { box-sizing: border-box; }
+        body {
+            margin: 0;
+            font-family: 'Inter', sans-serif;
+            background: var(--bg);
+            color: var(--text);
+        }
+        .app-shell { display: flex; min-height: 100vh; }
+        .sidebar {
+            width: 270px;
+            background: linear-gradient(180deg, var(--sidebar) 0%, var(--sidebar-light) 100%);
+            color: white;
+            padding: 22px 18px;
+            position: relative;
+            transition: width 0.25s ease;
+        }
+        .sidebar.collapsed { width: 92px; }
+        .sidebar.collapsed .nav-text,
+        .sidebar.collapsed .brand-name,
+        .sidebar.collapsed .user-meta { display: none; }
+        .brand {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            margin-bottom: 28px;
+            padding: 14px 10px;
+            border-radius: 16px;
+            background: rgba(255, 255, 255, 0.04);
+            border: 1px solid rgba(255,255,255,0.08);
+        }
+        .brand-mark {
+            width: 42px; height: 42px; border-radius: 12px;
+            background: linear-gradient(135deg, #38bdf8, #2563eb);
+            display: grid; place-items: center; font-size: 18px;
+        }
+        .nav { display: flex; flex-direction: column; gap: 10px; }
+        .nav a {
+            color: rgba(255,255,255,0.8); text-decoration: none;
+            display: flex; align-items: center; gap: 14px;
+            padding: 12px 14px; border-radius: 12px; transition: 0.2s ease;
+        }
+        .nav a:hover, .nav a.active {
+            background: rgba(59,130,246,0.18); color: white;
+        }
+        .nav i { width: 18px; text-align: center; }
+        .logout-wrap { position: absolute; left: 18px; right: 18px; bottom: 18px; }
+        .logout-btn {
+            width: 100%; border: none; border-radius: 12px;
+            background: rgba(239,68,68,0.14); color: white; padding: 12px 14px;
+            font-weight: 600; cursor: pointer; display: flex; align-items: center;
+            gap: 10px; justify-content: center; text-decoration: none;
+        }
+        .content { flex: 1; }
+        .topbar {
+            background: rgba(255,255,255,0.8); border-bottom: 1px solid var(--line);
+            padding: 18px 26px; display: flex; align-items: center; justify-content: space-between;
+            backdrop-filter: blur(12px);
+        }
+        .toggle-btn {
+            width: 42px; height: 42px; border: 1px solid var(--line);
+            background: white; border-radius: 12px; cursor: pointer;
+        }
+        .user-pill {
+            display: flex; align-items: center; gap: 12px; background: white;
+            border: 1px solid var(--line); border-radius: 12px; padding: 8px 12px;
+        }
+        .avatar {
+            width: 38px; height: 38px; border-radius: 50%; background: linear-gradient(135deg, #38bdf8, #2563eb);
+            display: grid; place-items: center; color: white; font-weight: 700;
+        }
+        .main { padding: 26px; }
+        .stats {
+            display: grid; grid-template-columns: repeat(3, minmax(180px, 1fr)); gap: 18px; margin-bottom: 20px;
+        }
+        .statement-shell {
+            background: linear-gradient(135deg, rgba(37,99,235,0.04), rgba(14,165,233,0.02));
+            border: 1px solid rgba(37,99,235,0.18);
+            padding: 20px;
+            margin-bottom: 20px;
+        }
+        .statement-head {
+            display: flex; align-items: center; justify-content: space-between; gap: 12px;
+            margin-bottom: 16px;
+        }
+        .statement-head h3 {
+            margin: 0; font-size: 1.2rem;
+        }
+        .account-grid {
+            display: grid; grid-template-columns: repeat(3, minmax(180px, 1fr)); gap: 14px;
+        }
+        .aging-grid {
+            display: grid; grid-template-columns: repeat(4, minmax(160px, 1fr)); gap: 14px; margin-top: 16px;
+        }
+        .mini-box {
+            background: rgba(255,255,255,0.8);
+            border: 1px solid var(--line); border-radius: 14px; padding: 14px 16px;
+        }
+        .mini-box span {
+            display: block; color: var(--muted); font-size: 0.72rem; text-transform: uppercase; letter-spacing: 0.06em; margin-bottom: 8px;
+        }
+        .mini-box strong {
+            font-size: 1.08rem;
+        }
+        .card {
+            background: var(--card); border: 1px solid var(--line); border-radius: 18px;
+            padding: 20px; box-shadow: 0 14px 30px rgba(15, 23, 42, 0.04);
+        }
+        .stat-label { color: var(--muted); font-size: 0.8rem; margin-bottom: 10px; }
+        .stat-value { font-size: 1.8rem; font-weight: 800; }
+        .stat-icon {
+            width: 48px; height: 48px; border-radius: 14px; display: grid; place-items: center;
+            margin-bottom: 14px; font-size: 1.1rem;
+        }
+        .stat-icon.blue { background: var(--primary-soft); color: var(--primary); }
+        .stat-icon.green { background: var(--success-soft); color: var(--success); }
+        .stat-icon.orange { background: var(--warning-soft); color: var(--warning); }
+        .section-header {
+            display: flex; justify-content: space-between; align-items: center; margin-bottom: 14px;
+        }
+        .section-header h3 { margin: 0; }
+        .filter-row {
+            display: flex; gap: 10px; flex-wrap: wrap; margin: 14px 0 18px;
+        }
+        .pay-now-btn {
+            border: none; border-radius: 10px; background: var(--success); color: white;
+            padding: 8px 12px; cursor: pointer; font-weight: 700;
+        }
+        .pay-now-btn.secondary {
+            background: #dbeafe; color: #1d4ed8;
+        }
+        .filter-btn {
+            border: 1px solid var(--line); background: white; color: var(--text);
+            border-radius: 999px; padding: 8px 14px; font-weight: 700; cursor: pointer;
+        }
+        .filter-btn.active {
+            background: var(--primary); color: white; border-color: var(--primary);
+        }
+        .badge {
+            display: inline-flex; align-items: center; padding: 6px 10px; border-radius: 999px;
+            font-size: 0.72rem; font-weight: 700;
+        }
+        .badge.success { background: var(--success-soft); color: var(--success); }
+        .badge.warning { background: var(--warning-soft); color: var(--warning); }
+        .badge.danger { background: var(--danger-soft); color: var(--danger); }
+        .table-wrap { overflow-x: auto; }
+        table {
+            width: 100%; border-collapse: collapse; margin-top: 10px; min-width: 700px;
+        }
+        th, td {
+            text-align: left; padding: 14px 12px; border-bottom: 1px solid var(--line);
+            vertical-align: top;
+        }
+        th { color: var(--muted); font-size: 0.75rem; text-transform: uppercase; letter-spacing: 0.08em; }
+        .empty-state {
+            border: 1px dashed var(--line); border-radius: 14px; background: #f8fafc; padding: 20px; color: var(--muted);
+            text-align: center; font-weight: 600;
+        }
+        @media (max-width: 980px) {
+            .stats { grid-template-columns: 1fr; }
+        }
+    </style>
+</head>
+<body>
+<div class="app-shell">
+    <aside class="sidebar" id="sidebar">
+        <div class="brand">
+            <div class="brand-mark"><i class="fa-solid fa-hospital"></i></div>
+            <div class="brand-name">CareConnect</div>
+        </div>
+
+        <nav class="nav">
+            <a href="/user/dashboard"><i class="fa-solid fa-gauge"></i><span class="nav-text">Dashboard</span></a>
+            <a href="/user/profile"><i class="fa-solid fa-user"></i><span class="nav-text">Profile</span></a>
+            <a href="/user/doctors"><i class="fa-solid fa-user-doctor"></i><span class="nav-text">Doctors</span></a>
+            <a href="/user/appointments"><i class="fa-solid fa-calendar-check"></i><span class="nav-text">Appointments</span></a>
+            <a class="active" href="/user/billing"><i class="fa-solid fa-file-invoice-dollar"></i><span class="nav-text">Billing</span></a>
+            <a href="/user/reports"><i class="fa-solid fa-file-medical"></i><span class="nav-text">Reports</span></a>
+            <a href="/user/settings"><i class="fa-solid fa-gear"></i><span class="nav-text">Settings</span></a>
+        </nav>
+
+        <div class="logout-wrap">
+            <a class="logout-btn" href="/logout"><i class="fa-solid fa-right-from-bracket"></i><span>Logout</span></a>
+        </div>
+    </aside>
+
+    <div class="content">
+        <header class="topbar">
+            <button class="toggle-btn" id="toggleSidebar" aria-label="Toggle sidebar"><i class="fa-solid fa-bars"></i></button>
+            <div style="font-weight:700; font-size:1.08rem;">My Billing</div>
+            <div class="user-pill">
+                <div class="avatar" th:text="${#strings.substring(user.fullName,0,1)}">U</div>
+                <div>
+                    <div style="font-weight:700;" th:text="${user.fullName}">User</div>
+                    <div style="font-size:0.72rem; color: var(--muted);" class="user-meta">Patient Portal</div>
+                </div>
+            </div>
+            <span id="currentUserName" th:text="${user.fullName}" style="display:none;">User</span>
+        </header>
+
+        <main class="main">
+            <section class="stats">
+                <div class="card">
+                    <div class="stat-icon blue"><i class="fa-solid fa-receipt"></i></div>
+                    <div class="stat-label">Total Invoices</div>
+                    <div class="stat-value" id="totalInvoices">₹0.00</div>
+                </div>
+                <div class="card">
+                    <div class="stat-icon green"><i class="fa-solid fa-circle-check"></i></div>
+                    <div class="stat-label">Paid</div>
+                    <div class="stat-value" id="totalPaid">₹0.00</div>
+                </div>
+                <div class="card">
+                    <div class="stat-icon orange"><i class="fa-solid fa-wallet"></i></div>
+                    <div class="stat-label">Outstanding</div>
+                    <div class="stat-value" id="outstanding">₹0.00</div>
+                </div>
+            </section>
+
+            <section class="card statement-shell">
+                <div class="statement-head">
+                    <div>
+                        <div style="font-size:0.74rem; color:var(--muted); text-transform:uppercase; letter-spacing:0.08em; margin-bottom:8px;">Billing overview</div>
+                        <h3>Patient statement</h3>
+                    </div>
+                    <span id="statusSummary" class="badge success">All accounts</span>
+                </div>
+                <div class="account-grid">
+                    <div class="mini-box">
+                        <span>Next due</span>
+                        <strong id="nextDue">No due date</strong>
+                    </div>
+                    <div class="mini-box">
+                        <span>Paid invoices</span>
+                        <strong id="paidInvoiceCount">0</strong>
+                    </div>
+                    <div class="mini-box">
+                        <span>Open balance</span>
+                        <strong id="openBalanceText">₹0.00</strong>
+                    </div>
+                </div>
+                <div class="aging-grid">
+                    <div class="mini-box">
+                        <span>Current</span>
+                        <strong id="agingCurrent">₹0.00</strong>
+                    </div>
+                    <div class="mini-box">
+                        <span>30 days</span>
+                        <strong id="aging30">₹0.00</strong>
+                    </div>
+                    <div class="mini-box">
+                        <span>60 days</span>
+                        <strong id="aging60">₹0.00</strong>
+                    </div>
+                    <div class="mini-box">
+                        <span>90+ days</span>
+                        <strong id="aging90">₹0.00</strong>
+                    </div>
+                </div>
+            </section>
+
+            <section class="card">
+                <div class="section-header">
+                    <h3>Invoice ledger</h3>
+                    <span class="badge success">Updated automatically</span>
+                </div>
+                <div class="filter-row">
+                    <button type="button" class="filter-btn active" data-filter="all">All</button>
+                    <button type="button" class="filter-btn" data-filter="unpaid">Unpaid</button>
+                    <button type="button" class="filter-btn" data-filter="partial">Partially paid</button>
+                    <button type="button" class="filter-btn" data-filter="paid">Paid</button>
+                </div>
+                <div class="table-wrap">
+                    <table>
+                        <thead>
+                        <tr>
+                            <th>Invoice</th>
+                            <th>Doctor</th>
+                            <th>Date</th>
+                            <th>Due Date</th>
+                            <th>Amount</th>
+                            <th>Status</th>
+                            <th>Action</th>
+                        </tr>
+                        </thead>
+                        <tbody id="invoiceTableBody"></tbody>
+                    </table>
+                </div>
+            </section>
+
+            <div id="paymentModal" th:data-upi-id="${upiId}" style="display:none; position:fixed; inset:0; background:rgba(15,23,42,0.32); z-index:1000; justify-content:center; align-items:center;">
+                <div style="background:white; width:min(520px, 90vw); border-radius:18px; box-shadow:0 30px 60px rgba(15,23,42,0.25); padding:24px; border:1px solid var(--line);">
+                    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:20px;">
+                        <h3 style="margin:0;">Pay invoice</h3>
+                        <button type="button" id="closePaymentModal" style="border:none; background:#f8fafc; border-radius:10px; width:36px; height:36px; cursor:pointer; font-size:1.1rem;">×</button>
+                    </div>
+                    <form id="payInvoiceForm">
+                        <div style="display:grid; gap:14px;">
+                            <div>
+                                <label style="display:block; margin-bottom:6px; font-weight:700;">Invoice number</label>
+                                <input id="payInvoiceNumber" readonly>
+                            </div>
+                            <div>
+                                <label style="display:block; margin-bottom:6px; font-weight:700;">Amount to pay</label>
+                                <input id="payAmount" type="number" min="0" step="0.01" required>
+                            </div>
+                            <div>
+                                <label style="display:block; margin-bottom:6px; font-weight:700;">Payment method</label>
+                                <select id="payMethod">
+                                    <option value="Credit Card">Credit Card</option>
+                                    <option value="Debit Card">Debit Card</option>
+                                    <option value="Internet Banking">Internet Banking</option>
+                                    <option value="UPI">UPI</option>
+                                </select>
+                            </div>
+                            <div id="upiQrPanel" style="display:none; border:1px solid var(--line); border-radius:14px; padding:14px; text-align:center; background:#f8fafc;">
+                                <div style="font-weight:700; margin-bottom:8px;">Scan to pay with UPI</div>
+                                <div id="upiQrCode" style="display:flex; justify-content:center; min-height:220px;"></div>
+                                <div id="upiQrDetails" style="font-size:0.8rem; color:var(--muted); margin-top:8px;"></div>
+                            </div>
+                            <div>
+                                <label style="display:block; margin-bottom:6px; font-weight:700;">Payment date</label>
+                                <input id="payDate" type="date" required>
+                            </div>
+                            <div>
+                                <label style="display:block; margin-bottom:6px; font-weight:700;">Notes</label>
+                                <textarea id="payNotes" placeholder="Optional notes or payment reference"></textarea>
+                            </div>
+                            <div style="display:flex; gap:10px; justify-content:flex-end; margin-top:8px;">
+                                <button type="button" id="cancelPaymentModal" style="border:none; background:#e2e8f0; color:var(--text); border-radius:10px; padding:10px 14px; font-weight:700; cursor:pointer;">Cancel</button>
+                                <button type="submit" style="border:none; background:var(--success); color:white; border-radius:10px; padding:10px 14px; font-weight:700; cursor:pointer;">Confirm payment</button>
+                            </div>
+                        </div>
+                    </form>
+                </div>
+            </div>
+
+            <section class="card" style="margin-top: 20px;">
+                <div class="section-header">
+                    <h3>Payment history</h3>
+                    <span class="badge success">Receipts available</span>
+                </div>
+                <div class="table-wrap">
+                    <table>
+                        <thead>
+                        <tr>
+                            <th>Receipt</th>
+                            <th>Invoice</th>
+                            <th>Paid Date</th>
+                            <th>Method</th>
+                            <th>Amount</th>
+                            <th>Status</th>
+                            <th>Action</th>
+                        </tr>
+                        </thead>
+                        <tbody id="paymentTableBody"></tbody>
+                    </table>
+                </div>
+            </section>
+        </main>
+    </div>
+</div>
+
+<script>
+    const sidebar = document.getElementById('sidebar');
+    document.getElementById('toggleSidebar').addEventListener('click', () => {
+        sidebar.classList.toggle('collapsed');
+    });
+
+    const currency = new Intl.NumberFormat('en-IN', {
+        style: 'currency',
+        currency: 'INR',
+        minimumFractionDigits: 2
+    });
+
+    let activeFilter = 'all';
+
+    const paymentModal = document.getElementById('paymentModal');
+    const payMethod = document.getElementById('payMethod');
+    const upiQrPanel = document.getElementById('upiQrPanel');
+    const upiQrCode = document.getElementById('upiQrCode');
+    const upiQrDetails = document.getElementById('upiQrDetails');
+
+    function formatCurrency(value) {
+        const number = Number(value || 0);
+        return currency.format(number);
+    }
+
+    function renderUpiQrCode() {
+        const amount = Number(document.getElementById('payAmount').value || 0);
+        const invoiceNumber = document.getElementById('payInvoiceNumber').value;
+        const upiId = paymentModal.dataset.upiId;
+        const showQr = payMethod.value === 'UPI' && amount > 0 && invoiceNumber && upiId;
+
+        upiQrPanel.style.display = showQr ? 'block' : 'none';
+        if (!showQr) return;
+
+        upiQrCode.innerHTML = '';
+        const upiLink = `upi://pay?pa=${encodeURIComponent(upiId)}&pn=${encodeURIComponent('CareConnect Hospital')}&am=${amount.toFixed(2)}&cu=INR&tn=${encodeURIComponent(invoiceNumber)}`;
+        new QRCode(upiQrCode, { text: upiLink, width: 220, height: 220, correctLevel: QRCode.CorrectLevel.M });
+        upiQrDetails.textContent = `${upiId} - ${formatCurrency(amount)} - ${invoiceNumber}`;
+    }
+
+    function getStatusBadgeClass(status) {
+        const normalized = String(status || '').toLowerCase();
+        if (normalized.includes('paid')) return 'success';
+        if (normalized.includes('overdue') || normalized.includes('cancel')) return 'danger';
+        return 'warning';
+    }
+
+    function generateInvoicePdf(invoice) {
+        if (!window.jspdf || !window.jspdf.jsPDF) {
+            alert('Invoice preview is not available right now.');
+            return;
+        }
+
+        const { jsPDF } = window.jspdf;
+        const doc = new jsPDF({ unit: 'pt', format: 'a4' });
+        const pageWidth = doc.internal.pageSize.getWidth();
+        const margin = 48;
+
+        const invoiceNumber = invoice.invoiceNumber || 'N/A';
+        const patientName = invoice.patientName || 'Patient';
+        const doctorName = invoice.doctorName || 'Not assigned';
+        const department = invoice.department || 'General Care';
+        const invoiceDate = invoice.invoiceDate || new Date().toISOString().slice(0, 10);
+        const dueDate = invoice.dueDate || invoiceDate;
+        const amount = Number(invoice.amount || 0);
+
+        doc.setFillColor(15, 23, 42);
+        doc.rect(0, 0, pageWidth, 88, 'F');
+        doc.setTextColor(255, 255, 255);
+        doc.setFont('helvetica', 'bold');
+        doc.setFontSize(18);
+        doc.text('CareConnect Hospital', margin, 34);
+        doc.setFontSize(24);
+        doc.text('Invoice', margin, 64);
+
+        doc.setTextColor(15, 23, 42);
+        doc.setFont('helvetica', 'normal');
+        doc.setFontSize(11);
+
+        doc.setDrawColor(226, 232, 240);
+        doc.setFillColor(248, 250, 252);
+        doc.roundedRect(margin, 110, pageWidth - margin * 2, 170, 12, 12, 'FD');
+
+        const infoX = margin + 20;
+        doc.setFont('helvetica', 'bold');
+        doc.text('Invoice No.', infoX, 145);
+        doc.text('Patient', infoX + 210, 145);
+        doc.text('Doctor', infoX, 185);
+        doc.text('Department', infoX + 210, 185);
+        doc.text('Invoice Date', infoX, 225);
+        doc.text('Due Date', infoX + 210, 225);
+        doc.text('Amount', infoX, 265);
+
+        doc.setFont('helvetica', 'normal');
+        doc.text(invoiceNumber, infoX, 162);
+        doc.text(patientName, infoX + 210, 162);
+        doc.text(doctorName, infoX, 202);
+        doc.text(department, infoX + 210, 202);
+        doc.text(invoiceDate, infoX, 242);
+        doc.text(dueDate, infoX + 210, 242);
+        doc.text(formatCurrency(amount), infoX, 282);
+
+        doc.setFont('helvetica', 'bold');
+        doc.text('Please settle the amount before the due date.', margin, 330);
+        doc.setFont('helvetica', 'normal');
+        doc.text('This invoice was automatically generated for the consultation and related care services.', margin, 355);
+
+        doc.save((invoiceNumber || 'invoice') + '.pdf');
+    }
+
+    function generateReceipt(payment) {
+        if (!window.jspdf || !window.jspdf.jsPDF) {
+            alert('Receipt preview is not available right now.');
+            return;
+        }
+
+        const { jsPDF } = window.jspdf;
+        const doc = new jsPDF({ unit: 'pt', format: 'a4' });
+        const pageWidth = doc.internal.pageSize.getWidth();
+        const margin = 48;
+
+        const receiptNumber = payment.receiptNumber || 'N/A';
+        const invoiceNumber = payment.invoiceNumber || 'N/A';
+        const paidAmount = Number(payment.amount || 0);
+        const paidDate = payment.paymentDate || new Date().toISOString().slice(0, 10);
+        const method = payment.paymentMethod || 'Cash';
+
+        doc.setFillColor(15, 23, 42);
+        doc.rect(0, 0, pageWidth, 88, 'F');
+        doc.setTextColor(255, 255, 255);
+        doc.setFont('helvetica', 'bold');
+        doc.setFontSize(18);
+        doc.text('CareConnect Hospital', margin, 34);
+        doc.setFontSize(24);
+        doc.text('Payment Receipt', margin, 64);
+
+        doc.setTextColor(15, 23, 42);
+        doc.setFont('helvetica', 'normal');
+        doc.setFontSize(11);
+
+        doc.setDrawColor(226, 232, 240);
+        doc.setFillColor(248, 250, 252);
+        doc.roundedRect(margin, 110, pageWidth - margin * 2, 146, 12, 12, 'FD');
+
+        const infoX = margin + 20;
+        doc.setFont('helvetica', 'bold');
+        doc.text('Receipt No.', infoX, 145);
+        doc.text('Invoice No.', infoX + 210, 145);
+        doc.text('Paid Date', infoX, 185);
+        doc.text('Payment Method', infoX + 210, 185);
+        doc.text('Amount', infoX, 225);
+
+        doc.setFont('helvetica', 'normal');
+        doc.text(receiptNumber, infoX, 162);
+        doc.text(invoiceNumber, infoX + 210, 162);
+        doc.text(paidDate, infoX, 202);
+        doc.text(method, infoX + 210, 202);
+        doc.text(formatCurrency(paidAmount), infoX, 242);
+
+        doc.setFont('helvetica', 'bold');
+        doc.text('Thank you for your payment.', margin, 310);
+        doc.setFont('helvetica', 'normal');
+        doc.text('This receipt confirms the successful settlement of the hospital invoice.', margin, 335);
+
+        doc.save((receiptNumber || 'receipt') + '.pdf');
+    }
+
+    function getInvoicePaymentStatus(invoice, paymentList) {
+        const invoicePaid = paymentList
+            .filter(payment => payment.invoiceNumber === invoice.invoiceNumber)
+            .reduce((sum, payment) => sum + (Number(payment.amount) || 0), 0);
+        const remaining = (Number(invoice.amount) || 0) - invoicePaid;
+
+        if (remaining <= 0) return 'paid';
+        if (invoicePaid > 0) return 'partial';
+        return 'unpaid';
+    }
+
+    function getInvoiceRemainingBalance(invoice, paymentList) {
+        const invoicePaid = paymentList
+            .filter(payment => payment.invoiceNumber === invoice.invoiceNumber)
+            .reduce((sum, payment) => sum + (Number(payment.amount) || 0), 0);
+        return Math.max((Number(invoice.amount) || 0) - invoicePaid, 0);
+    }
+
+    function getAgingBucket(invoice, paymentList) {
+        const remaining = getInvoiceRemainingBalance(invoice, paymentList);
+        if (remaining <= 0) return 'paid';
+        if (!invoice.dueDate) return 'current';
+
+        const dueDate = new Date(`${invoice.dueDate}T00:00:00`);
+        const diffDays = Math.floor((new Date() - dueDate) / 86400000);
+
+        if (diffDays <= 0) return 'current';
+        if (diffDays <= 30) return '30';
+        if (diffDays <= 60) return '60';
+        return '90';
+    }
+
+    function getFilteredInvoices(invoiceList, paymentList) {
+        return invoiceList.filter(invoice => {
+            const status = getInvoicePaymentStatus(invoice, paymentList);
+            if (activeFilter === 'all') return true;
+            return status === activeFilter;
+        });
+    }
+
+    function renderPaymentHistory(paymentList) {
+        const tableBody = document.getElementById('paymentTableBody');
+        if (!paymentList.length) {
+            tableBody.innerHTML = `
+                <tr>
+                    <td colspan="7">
+                        <div class="empty-state">No payment receipts are available yet.</div>
+                    </td>
+                </tr>`;
+            return;
+        }
+
+        tableBody.innerHTML = paymentList.map(payment => `
+            <tr>
+                <td><strong>${payment.receiptNumber || 'N/A'}</strong></td>
+                <td>${payment.invoiceNumber || 'N/A'}</td>
+                <td>${payment.paymentDate || 'N/A'}</td>
+                <td>${payment.paymentMethod || 'Cash'}</td>
+                <td>${formatCurrency(payment.amount)}</td>
+                <td><span class="badge ${getStatusBadgeClass(payment.status)}">${payment.status || 'Completed'}</span></td>
+                <td>
+                    <button type="button" data-receipt="${payment.receiptNumber || 'receipt'}" style="border:none; background:#dbeafe; color:#1d4ed8; border-radius:10px; padding:8px 12px; cursor:pointer; font-weight:700;">
+                        Download
+                    </button>
+                </td>
+            </tr>
+        `).join('');
+
+        document.querySelectorAll('[data-receipt]').forEach(button => {
+            button.addEventListener('click', () => {
+                const match = paymentList.find(payment => (payment.receiptNumber || 'receipt') === button.dataset.receipt);
+                if (match) generateReceipt(match);
+            });
+        });
+    }
+
+    async function loadUserBilling() {
+        try {
+            const [invoiceResponse, paymentResponse] = await Promise.all([
+                fetch('/api/user/invoices'),
+                fetch('/api/user/payments')
+            ]);
+
+            const invoices = invoiceResponse.ok ? await invoiceResponse.json() : [];
+            const payments = paymentResponse.ok ? await paymentResponse.json() : [];
+
+            const invoiceList = Array.isArray(invoices) ? invoices : [];
+            const paymentList = Array.isArray(payments) ? payments : [];
+
+            const invoiceTotal = invoiceList.reduce((sum, invoice) => sum + (Number(invoice.amount) || 0), 0);
+            const paidTotal = paymentList.reduce((sum, payment) => sum + (Number(payment.amount) || 0), 0);
+            const outstanding = invoiceTotal - paidTotal;
+
+            const nextDue = invoiceList
+                .map(invoice => {
+                    const invoicePaid = paymentList
+                        .filter(payment => payment.invoiceNumber === invoice.invoiceNumber)
+                        .reduce((sum, payment) => sum + (Number(payment.amount) || 0), 0);
+                    return {
+                        dueDate: invoice.dueDate || null,
+                        remaining: Math.max((Number(invoice.amount) || 0) - invoicePaid, 0)
+                    };
+                })
+                .filter(item => item.remaining > 0 && item.dueDate)
+                .sort((a, b) => new Date(a.dueDate) - new Date(b.dueDate))[0];
+
+            const agingSummary = {
+                current: 0,
+                '30': 0,
+                '60': 0,
+                '90': 0
+            };
+
+            invoiceList.forEach(invoice => {
+                const bucket = getAgingBucket(invoice, paymentList);
+                if (bucket === 'paid') return;
+                agingSummary[bucket] = (agingSummary[bucket] || 0) + getInvoiceRemainingBalance(invoice, paymentList);
+            });
+
+            document.getElementById('totalInvoices').textContent = formatCurrency(invoiceTotal);
+            document.getElementById('totalPaid').textContent = formatCurrency(paidTotal);
+            document.getElementById('outstanding').textContent = formatCurrency(Math.max(outstanding, 0));
+            document.getElementById('openBalanceText').textContent = formatCurrency(Math.max(outstanding, 0));
+            document.getElementById('nextDue').textContent = nextDue ? nextDue.dueDate : 'No due date';
+            document.getElementById('paidInvoiceCount').textContent = String(invoiceList.filter(invoice => {
+                const invoicePaid = paymentList.filter(payment => payment.invoiceNumber === invoice.invoiceNumber)
+                    .reduce((sum, payment) => sum + (Number(payment.amount) || 0), 0);
+                return (Number(invoice.amount) || 0) <= invoicePaid;
+            }).length);
+            document.getElementById('agingCurrent').textContent = formatCurrency(agingSummary.current || 0);
+            document.getElementById('aging30').textContent = formatCurrency(agingSummary['30'] || 0);
+            document.getElementById('aging60').textContent = formatCurrency(agingSummary['60'] || 0);
+            document.getElementById('aging90').textContent = formatCurrency(agingSummary['90'] || 0);
+
+            const statusSummaryText = outstanding > 0 ? 'Balance due' : 'Fully settled';
+            const statusBadge = document.getElementById('statusSummary');
+            statusBadge.textContent = statusSummaryText;
+            statusBadge.className = 'badge ' + (outstanding > 0 ? 'warning' : 'success');
+
+            const filteredInvoices = getFilteredInvoices(invoiceList, paymentList);
+            const totalFiltered = filteredInvoices.length;
+
+            if (!invoiceList.length) {
+                document.getElementById('invoiceTableBody').innerHTML = `
+                    <tr>
+                        <td colspan="6">
+                            <div class="empty-state">No invoices available for your account yet.</div>
+                        </td>
+                    </tr>`;
+            } else if (!totalFiltered) {
+                document.getElementById('invoiceTableBody').innerHTML = `
+                    <tr>
+                        <td colspan="6">
+                            <div class="empty-state">No invoices match the selected statement filter.</div>
+                        </td>
+                    </tr>`;
+            } else {
+                const rows = filteredInvoices.map(invoice => {
+                    const invoicePaymentStatus = getInvoicePaymentStatus(invoice, paymentList);
+                    const invoicePaid = paymentList
+                        .filter(payment => payment.invoiceNumber === invoice.invoiceNumber)
+                        .reduce((sum, payment) => sum + (Number(payment.amount) || 0), 0);
+                    const remaining = Math.max((Number(invoice.amount) || 0) - invoicePaid, 0);
+                    const status = remaining > 0 ? (invoicePaymentStatus === 'partial' ? 'Partially paid' : 'Unpaid') : 'Paid';
+                    return `
+                        <tr>
+                            <td><strong>${invoice.invoiceNumber || 'N/A'}</strong><br><span style="color: var(--muted); font-size: 0.8rem;">${invoice.department || 'General Care'}</span></td>
+                            <td>${invoice.doctorName || 'Dr. Not assigned'}</td>
+                            <td>${invoice.invoiceDate || 'N/A'}</td>
+                            <td>${invoice.dueDate || 'N/A'}</td>
+                            <td>${formatCurrency(invoice.amount)}</td>
+                            <td><span class="badge ${getStatusBadgeClass(status)}">${status}</span></td>
+                            <td>
+                                <button type="button" data-invoice="${invoice.invoiceNumber || 'invoice'}" style="border:none; background:#dbeafe; color:#1d4ed8; border-radius:10px; padding:8px 12px; cursor:pointer; font-weight:700; margin-right:8px;">
+                                    Download
+                                </button>
+                                ${remaining > 0 ? `<button type="button" class="pay-now-btn" data-pay="${invoice.invoiceNumber || 'invoice'}">Pay now</button>` : `<button type="button" class="pay-now-btn secondary" disabled style="opacity:0.6; cursor:not-allowed;">Paid</button>` }
+                            </td>
+                        </tr>
+                    `;
+                }).join('');
+
+                document.getElementById('invoiceTableBody').innerHTML = rows;
+                document.querySelectorAll('[data-invoice]').forEach(button => {
+                    button.addEventListener('click', () => {
+                        const match = invoiceList.find(item => (item.invoiceNumber || 'invoice') === button.dataset.invoice);
+                        if (match) generateInvoicePdf(match);
+                    });
+                });
+                document.querySelectorAll('[data-pay]').forEach(button => {
+                    button.addEventListener('click', () => {
+                        const match = invoiceList.find(item => (item.invoiceNumber || 'invoice') === button.dataset.pay);
+                        if (!match) return;
+                        const patientName = document.getElementById('currentUserName')?.textContent?.trim() || 'User';
+                        const invoicePaid = paymentList
+                            .filter(payment => payment.invoiceNumber === match.invoiceNumber)
+                            .reduce((sum, payment) => sum + (Number(payment.amount) || 0), 0);
+                        const remaining = Math.max((Number(match.amount) || 0) - invoicePaid, 0);
+
+                        document.getElementById('payInvoiceNumber').value = match.invoiceNumber || '';
+                        document.getElementById('payAmount').value = Number(remaining || 0).toFixed(2);
+                        document.getElementById('payDate').value = new Date().toISOString().slice(0, 10);
+                        document.getElementById('payMethod').value = 'UPI';
+                        document.getElementById('payNotes').value = `Payment for ${match.invoiceNumber || 'invoice'} by ${patientName}`;
+                        document.getElementById('paymentModal').style.display = 'flex';
+                        renderUpiQrCode();
+                    });
+                });
+            }
+
+            const unpaidCount = invoiceList.filter(invoice => getInvoicePaymentStatus(invoice, paymentList) === 'unpaid').length;
+            const partialCount = invoiceList.filter(invoice => getInvoicePaymentStatus(invoice, paymentList) === 'partial').length;
+            const paidCount = invoiceList.filter(invoice => getInvoicePaymentStatus(invoice, paymentList) === 'paid').length;
+
+            if (activeFilter === 'unpaid') {
+                statusBadge.textContent = `Unpaid (${unpaidCount})`;
+                statusBadge.className = 'badge warning';
+            } else if (activeFilter === 'partial') {
+                statusBadge.textContent = `Partially paid (${partialCount})`;
+                statusBadge.className = 'badge warning';
+            } else if (activeFilter === 'paid') {
+                statusBadge.textContent = `Paid (${paidCount})`;
+                statusBadge.className = 'badge success';
+            } else {
+                statusBadge.textContent = `All accounts (${invoiceList.length})`;
+                statusBadge.className = 'badge success';
+            }
+
+            renderPaymentHistory(paymentList);
+        } catch (error) {
+            document.getElementById('invoiceTableBody').innerHTML = `
+                <tr>
+                    <td colspan="6">
+                        <div class="empty-state">Unable to load billing information right now.</div>
+                    </td>
+                </tr>`;
+            document.getElementById('paymentTableBody').innerHTML = `
+                <tr>
+                    <td colspan="7">
+                        <div class="empty-state">Unable to load payment receipts right now.</div>
+                    </td>
+                </tr>`;
+        }
+    }
+
+    document.getElementById('closePaymentModal').addEventListener('click', () => {
+        document.getElementById('paymentModal').style.display = 'none';
+    });
+    document.getElementById('cancelPaymentModal').addEventListener('click', () => {
+        document.getElementById('paymentModal').style.display = 'none';
+    });
+    payMethod.addEventListener('change', renderUpiQrCode);
+    document.getElementById('payAmount').addEventListener('input', renderUpiQrCode);
+
+    document.getElementById('payInvoiceForm').addEventListener('submit', async (event) => {
+        event.preventDefault();
+        const patientName = document.getElementById('currentUserName')?.textContent?.trim() || 'User';
+        const invoiceNumber = document.getElementById('payInvoiceNumber').value;
+        const payload = {
+            patientName,
+            invoiceNumber,
+            amount: Number(document.getElementById('payAmount').value || 0),
+            paymentMethod: document.getElementById('payMethod').value,
+            paymentDate: document.getElementById('payDate').value,
+            status: 'Completed',
+            notes: document.getElementById('payNotes').value
+        };
+
+        if (!invoiceNumber || Number(payload.amount) <= 0) {
+            alert('Please enter a valid amount for the selected invoice.');
+            return;
+        }
+
+        const response = await fetch('/api/payments', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(payload)
+        });
+
+        if (!response.ok) {
+            const errorText = await response.text();
+            alert(errorText || 'Unable to record payment right now.');
+            return;
+        }
+
+        document.getElementById('paymentModal').style.display = 'none';
+        document.getElementById('payInvoiceForm').reset();
+        loadUserBilling();
+    });
+
+    document.querySelectorAll('.filter-btn').forEach(button => {
+        button.addEventListener('click', () => {
+            document.querySelectorAll('.filter-btn').forEach(item => item.classList.remove('active'));
+            button.classList.add('active');
+            activeFilter = button.dataset.filter || 'all';
+            loadUserBilling();
+        });
+    });
+
+    loadUserBilling();
+</script>
+</body>
+</html>

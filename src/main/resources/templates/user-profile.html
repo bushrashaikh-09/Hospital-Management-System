@@ -1,0 +1,181 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <title>User Profile</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css">
+    <style>
+        :root { --bg:#f8fafc; --sidebar:#0f172a; --sidebar-light:#1e293b; --card:#fff; --primary:#2563eb; --primary-soft:#eff6ff; --line:#e2e8f0; --text:#0f172a; --muted:#64748b; }
+        * { box-sizing: border-box; }
+        body { margin:0; font-family:'Inter',sans-serif; background:var(--bg); color:var(--text); }
+        .app-shell { display:flex; min-height:100vh; }
+        .sidebar { width:270px; background:linear-gradient(180deg, var(--sidebar), var(--sidebar-light)); color:white; padding:22px 18px; position:relative; transition:width 0.25s ease; }
+        .sidebar.collapsed { width:92px; }
+        .sidebar.collapsed .nav-text, .sidebar.collapsed .brand-name, .sidebar.collapsed .user-meta { display:none; }
+        .brand { display:flex; align-items:center; gap:12px; margin-bottom:28px; padding:14px 10px; border-radius:16px; background:rgba(255,255,255,0.04); border:1px solid rgba(255,255,255,0.08); }
+        .brand-mark { width:42px; height:42px; border-radius:12px; background:linear-gradient(135deg,#38bdf8,#2563eb); display:grid; place-items:center; }
+        .nav { display:flex; flex-direction:column; gap:10px; }
+        .nav a { text-decoration:none; color:rgba(255,255,255,0.8); display:flex; align-items:center; gap:14px; padding:12px 14px; border-radius:12px; }
+        .nav a.active, .nav a:hover { background:rgba(59,130,246,0.18); color:white; }
+        .logout-wrap { position:absolute; left:18px; right:18px; bottom:18px; }
+        .logout-btn { width:100%; border:none; border-radius:12px; background:rgba(239,68,68,0.14); color:white; padding:12px 14px; font-weight:600; display:flex; align-items:center; justify-content:center; gap:10px; text-decoration:none; }
+        .content { flex:1; }
+        .topbar { background:rgba(255,255,255,0.8); border-bottom:1px solid var(--line); padding:18px 26px; display:flex; justify-content:space-between; align-items:center; }
+        .toggle-btn { width:42px;height:42px;border:1px solid var(--line); background:white; border-radius:12px; cursor:pointer; }
+        .avatar-pill { display:flex; align-items:center; gap:12px; background:white; border:1px solid var(--line); border-radius:12px; padding:8px 12px; }
+        .avatar { width:38px; height:38px; border-radius:50%; background:linear-gradient(135deg,#38bdf8,#2563eb); color:white; display:grid; place-items:center; font-weight:700; }
+        .main { padding:34px; max-width:1180px; }
+        .page-heading { margin-bottom:26px; }
+        .eyebrow { margin:0 0 8px; color:var(--primary); font-size:0.75rem; font-weight:800; letter-spacing:0.08em; text-transform:uppercase; }
+        h1 { margin:0 0 8px; font-size:2rem; letter-spacing:-0.03em; }
+        .page-heading p { margin:0; color:var(--muted); }
+        .profile-layout { display:grid; grid-template-columns:minmax(220px,0.72fr) minmax(0,1.55fr); gap:22px; align-items:start; }
+        .profile-box { background:var(--card); border:1px solid var(--line); border-radius:20px; padding:28px; box-shadow:0 12px 30px rgba(15,23,42,0.05); }
+        .profile-summary { background:linear-gradient(145deg,#eff6ff,#ffffff 72%); text-align:center; }
+        .profile-avatar { width:88px; height:88px; margin:4px auto 18px; border-radius:50%; background:linear-gradient(135deg,#38bdf8,#2563eb); color:white; display:grid; place-items:center; font-size:2rem; font-weight:800; box-shadow:0 10px 20px rgba(37,99,235,0.2); }
+        .profile-summary h2 { margin:0 0 6px; font-size:1.25rem; }
+        .profile-summary p { margin:0; color:var(--muted); overflow-wrap:anywhere; }
+        .summary-divider { height:1px; margin:24px 0; background:var(--line); }
+        .summary-detail { display:flex; align-items:center; gap:10px; color:var(--muted); font-size:0.9rem; text-align:left; }
+        .summary-detail + .summary-detail { margin-top:14px; }
+        .summary-detail i { width:18px; color:var(--primary); text-align:center; }
+        .form-heading { margin-bottom:22px; }
+        .form-heading h2 { margin:0 0 6px; font-size:1.25rem; }
+        .form-heading p { margin:0; color:var(--muted); font-size:0.9rem; }
+        .account-info { margin-top:28px; padding-top:24px; border-top:1px solid var(--line); }
+        .account-info h3 { margin:0 0 14px; font-size:1rem; }
+        .info-grid { display:grid; grid-template-columns:1fr 1fr; gap:12px; }
+        .info-item { padding:14px; background:var(--primary-soft); border-radius:12px; }
+        .info-label { display:block; margin-bottom:5px; color:var(--muted); font-size:0.75rem; font-weight:700; text-transform:uppercase; letter-spacing:0.04em; }
+        .info-value { color:var(--text); font-weight:600; }
+        .alert { margin-bottom:18px; padding:12px 14px; border-radius:12px; display:flex; align-items:center; gap:10px; }
+        .alert.success { background:#ecfdf5; color:#166534; border:1px solid #a7f3d0; }
+        .alert.error { background:#fef2f2; color:#b91c1c; border:1px solid #fecaca; }
+        form { display:grid; gap:18px; }
+        .fields { display:grid; grid-template-columns:1fr 1fr; gap:18px; }
+        .input-group { display:flex; flex-direction:column; gap:8px; }
+        .input-group label { font-weight:600; color:var(--text); font-size:0.9rem; }
+        .input-group input { border:1px solid var(--line); border-radius:12px; padding:14px 16px; font-size:1rem; font-family:inherit; transition:border-color 0.2s, box-shadow 0.2s; }
+        .input-group input:focus { outline:none; border-color:var(--primary); box-shadow:0 0 0 4px rgba(37,99,235,0.12); }
+        .form-actions { display:flex; justify-content:flex-end; margin-top:4px; }
+        button { border:none; background:linear-gradient(135deg,#2563eb,#0ea5e9); color:white; padding:14px 20px; font-weight:700; border-radius:12px; cursor:pointer; }
+        @media (max-width:900px) { .profile-layout { grid-template-columns:1fr; } .profile-summary { text-align:left; } .profile-avatar { margin-left:0; } }
+        @media (max-width:760px) { .main { padding:24px 18px; } .fields { grid-template-columns:1fr; } .topbar { padding:14px 18px; } .avatar-pill { padding:6px 8px; } .avatar-pill > div:last-child { display:none; } h1 { font-size:1.65rem; } }
+    </style>
+</head>
+<body>
+<div class="app-shell">
+    <aside class="sidebar" id="sidebar">
+        <div class="brand">
+            <div class="brand-mark"><i class="fa-solid fa-hospital"></i></div>
+            <div class="brand-name">CareConnect</div>
+        </div>
+        <nav class="nav">
+            <a href="/user/dashboard"><i class="fa-solid fa-gauge"></i><span class="nav-text">Dashboard</span></a>
+            <a class="active" href="/user/profile"><i class="fa-solid fa-user"></i><span class="nav-text">Profile</span></a>
+            <a href="/user/doctors"><i class="fa-solid fa-user-doctor"></i><span class="nav-text">Doctors</span></a>
+            <a href="/user/appointments"><i class="fa-solid fa-calendar-check"></i><span class="nav-text">Appointments</span></a>
+            <a href="/user/reports"><i class="fa-solid fa-file-medical"></i><span class="nav-text">Reports</span></a>
+            <a href="/user/settings"><i class="fa-solid fa-gear"></i><span class="nav-text">Settings</span></a>
+        </nav>
+        <div class="logout-wrap">
+            <a class="logout-btn" href="/logout"><i class="fa-solid fa-right-from-bracket"></i><span>Logout</span></a>
+        </div>
+    </aside>
+
+    <div class="content">
+        <header class="topbar">
+            <button class="toggle-btn" id="toggleSidebar" aria-label="Toggle sidebar"><i class="fa-solid fa-bars"></i></button>
+            <div class="avatar-pill">
+                <div class="avatar" th:text="${#strings.isEmpty(user.fullName) ? 'U' : #strings.substring(user.fullName,0,1).toUpperCase()}">U</div>
+                <div>
+                    <div class="user-meta" style="font-weight:700;" th:text="${user.fullName}">User</div>
+                    <div style="font-size:0.72rem; color:var(--muted);">Patient Profile</div>
+                </div>
+            </div>
+        </header>
+
+        <main class="main">
+            <div class="page-heading">
+                <p class="eyebrow">Account</p>
+                <h1>My profile</h1>
+                <p>Keep your contact details up to date for smoother care coordination.</p>
+            </div>
+
+            <div class="profile-layout">
+                <section class="profile-box profile-summary">
+                    <div class="profile-avatar" th:text="${#strings.isEmpty(user.fullName) ? 'U' : #strings.substring(user.fullName,0,1).toUpperCase()}">U</div>
+                    <h2 th:text="${user.fullName}">User</h2>
+                    <p th:text="${user.email}">user@example.com</p>
+                    <div class="summary-divider"></div>
+                    <div class="summary-detail"><i class="fa-solid fa-shield-heart"></i><span>Verified patient account</span></div>
+                    <div class="summary-detail"><i class="fa-solid fa-lock"></i><span>Your information is private</span></div>
+                </section>
+
+                <section class="profile-box">
+                    <div class="form-heading">
+                        <h2>Personal details</h2>
+                        <p>Update the contact details connected to your account.</p>
+                    </div>
+                <div th:if="${success != null}" class="alert success" th:text="${success}"></div>
+                <div th:if="${error != null}" class="alert error"><i class="fa-solid fa-circle-exclamation"></i><span th:text="${error}"></span></div>
+
+                <form method="post" th:action="@{/user/profile}">
+                    <div class="fields">
+                        <div class="input-group">
+                            <label>Full name</label>
+                            <input type="text" name="fullName" th:value="${user.fullName}" required>
+                        </div>
+                        <div class="input-group">
+                            <label>Email</label>
+                            <input type="email" name="email" th:value="${user.email}" required>
+                        </div>
+                        <div class="input-group">
+                            <label for="phoneNumber">Phone number</label>
+                            <input id="phoneNumber" type="tel" name="phoneNumber" th:value="${user.phoneNumber}" placeholder="Enter your phone number" autocomplete="tel">
+                        </div>
+                        <div class="input-group">
+                            <label for="address">Address</label>
+                            <input id="address" type="text" name="address" th:value="${user.address}" placeholder="Enter your address" autocomplete="street-address">
+                        </div>
+                    </div>
+                    <div class="form-actions"><button type="submit"><i class="fa-solid fa-check"></i> Save changes</button></div>
+                </form>
+                <div class="account-info">
+                    <h3>Account information</h3>
+                    <div class="info-grid">
+                        <div class="info-item">
+                            <span class="info-label">Patient ID</span>
+                            <span class="info-value" th:text="${user.id != null ? 'PT-' + user.id : 'Pending'}">PT-001</span>
+                        </div>
+                        <div class="info-item">
+                            <span class="info-label">Account type</span>
+                            <span class="info-value" th:text="${user.role}">USER</span>
+                        </div>
+                        <div class="info-item">
+                            <span class="info-label">Member since</span>
+                            <span class="info-value" th:text="${user.createdAt != null ? #temporals.format(user.createdAt, 'dd MMM yyyy') : 'Not available'}">23 Sep 2026</span>
+                        </div>
+                        <div class="info-item">
+                            <span class="info-label">Account status</span>
+                            <span class="info-value" th:text="${user.enabled ? 'Active' : 'Inactive'}">Active</span>
+                        </div>
+                    </div>
+                </div>
+                </section>
+            </div>
+        </main>
+    </div>
+</div>
+
+<script>
+    const sidebar = document.getElementById('sidebar');
+    document.getElementById('toggleSidebar').addEventListener('click', () => {
+        sidebar.classList.toggle('collapsed');
+    });
+</script>
+</body>
+</html>

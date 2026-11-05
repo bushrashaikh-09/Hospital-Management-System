@@ -1,0 +1,221 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <title>Doctor Management</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css">
+    <style>
+        :root { --bg:#f3f7ff; --sidebar:#0f172a; --sidebar-light:#1e293b; --primary:#2563eb; --card:#fff; --line:#e2e8f0; --text:#0f172a; --muted:#64748b; }
+        * { box-sizing: border-box; }
+        body { margin:0; font-family:'Inter',sans-serif; background:var(--bg); color:var(--text); }
+        .app-shell { display:flex; min-height:100vh; }
+        .sidebar { width:270px; background:linear-gradient(180deg, var(--sidebar), var(--sidebar-light)); color:white; padding:22px 18px; position:relative; transition: width 0.25s ease; }
+        .sidebar.collapsed { width: 92px; }
+        .sidebar.collapsed .nav-text, .sidebar.collapsed .brand-name, .sidebar.collapsed .user-meta { display:none; }
+        .brand { display:flex; align-items:center; gap:12px; margin-bottom:28px; padding:14px 10px; border-radius:16px; background:rgba(255,255,255,0.04); }
+        .brand-mark { width:42px; height:42px; border-radius:12px; background:linear-gradient(135deg,#60a5fa,#2563eb); display:grid; place-items:center; }
+        .nav { display:flex; flex-direction:column; gap:10px; }
+        .nav a { color:rgba(255,255,255,0.8); text-decoration:none; display:flex; align-items:center; gap:14px; padding:12px 14px; border-radius:12px; }
+        .nav a.active, .nav a:hover { background:rgba(59,130,246,0.18); color:white; }
+        .logout-wrap { position:absolute; left:18px; right:18px; bottom:18px; }
+        .logout-btn { width:100%; border:none; border-radius:12px; background:rgba(239,68,68,0.14); color:white; padding:12px 14px; font-weight:600; display:flex; align-items:center; justify-content:center; gap:10px; text-decoration:none; }
+        .content { flex:1; }
+        .topbar { display:flex; align-items:center; justify-content:space-between; background:rgba(255,255,255,0.8); padding:18px 26px; border-bottom:1px solid var(--line); }
+        .toggle-btn {
+            width: 42px; height: 42px; border: 1px solid var(--line); background: white; border-radius: 12px; cursor: pointer;
+        }
+        .user-pill { display:flex; align-items:center; gap:12px; background:white; border:1px solid var(--line); border-radius:12px; padding:8px 12px; }
+        .avatar { width:38px; height:38px; border-radius:50%; background:linear-gradient(135deg,#60a5fa,#2563eb); display:grid; place-items:center; color:white; font-weight:700; }
+        .main { padding:26px; }
+        .card { background:var(--card); border:1px solid var(--line); border-radius:18px; padding:20px; }
+        .doctor-grid { display:grid; grid-template-columns:repeat(4, minmax(220px, 1fr)); gap:18px; margin-top:18px; }
+        .doctor-card { background:#fff; border:1px solid var(--line); border-radius:16px; padding:18px; }
+        .doctor-header { display:flex; align-items:center; justify-content:space-between; gap:10px; }
+        .doctor-avatar { width:52px; height:52px; border-radius:50%; background:linear-gradient(135deg,#60a5fa,#2563eb); display:grid; place-items:center; color:white; font-weight:700; }
+        .specialty { display:inline-flex; padding:6px 10px; border-radius:999px; background:#dbeafe; color:#1d4ed8; font-weight:700; font-size:0.72rem; }
+        .service-list { list-style:none; padding:0; margin:12px 0 0; display:grid; gap:8px; }
+        .service-list li { padding:8px 10px; background:#f8fafc; border:1px solid var(--line); border-radius:10px; }
+        .action-btn, .row-edit-btn { border:none; border-radius:10px; background:#dbeafe; color:#1d4ed8; cursor:pointer; font-weight:700; padding:8px 12px; }
+        .row-edit-btn.save-btn { background:#dcfce7; color:#166534; }
+        input, select { border:1px solid #dbeafe; border-radius:8px; padding:8px 10px; width:100%; }
+        .edit-form { display:grid; gap:10px; }
+    </style>
+</head>
+<body>
+<div class="app-shell">
+    <aside class="sidebar" id="sidebar">
+        <div class="brand">
+            <div class="brand-mark"><i class="fa-solid fa-hospital"></i></div>
+            <div class="brand-name">CareConnect</div>
+        </div>
+        <nav class="nav">
+            <a href="/admin/dashboard"><i class="fa-solid fa-gauge"></i><span class="nav-text">Dashboard</span></a>
+            <a href="/admin/patients"><i class="fa-solid fa-user-injured"></i><span class="nav-text">Patients</span></a>
+            <a href="/admin/appointments"><i class="fa-solid fa-calendar-check"></i><span class="nav-text">Appointments</span></a>
+            <a href="/admin/reports"><i class="fa-solid fa-chart-line"></i><span class="nav-text">Reports</span></a>
+            <a href="/admin/invoices"><i class="fa-solid fa-file-invoice-dollar"></i><span class="nav-text">Invoices</span></a>
+            <a href="/admin/payments"><i class="fa-solid fa-money-bill-wave"></i><span class="nav-text">Payments</span></a>
+            <a class="active" href="/admin/doctors"><i class="fa-solid fa-user-doctor"></i><span class="nav-text">Doctors</span></a>
+            <a href="/admin/settings"><i class="fa-solid fa-gear"></i><span class="nav-text">Settings</span></a>
+        </nav>
+        <div class="logout-wrap">
+            <a class="logout-btn" href="/logout"><i class="fa-solid fa-right-from-bracket"></i><span>Logout</span></a>
+        </div>
+    </aside>
+
+    <div class="content">
+        <header class="topbar">
+            <button class="toggle-btn" id="toggleSidebar" aria-label="Toggle sidebar"><i class="fa-solid fa-bars"></i></button>
+            <div style="font-weight:700; font-size:1.1rem;">Doctor Directory</div>
+            <div class="user-pill">
+                <div class="avatar" th:text="${#strings.substring(user.fullName,0,1)}">A</div>
+                <div>
+                    <div style="font-weight:700;" th:text="${user.fullName}">Admin</div>
+                    <div style="font-size:0.72rem; color:var(--muted);">Administrator</div>
+                </div>
+            </div>
+        </header>
+
+        <main class="main">
+            <div class="card">
+                <div style="display:flex; align-items:center; justify-content:space-between; gap:12px; margin-bottom:12px; flex-wrap:wrap;">
+                    <h2 style="margin:0;">Medical Team</h2>
+                </div>
+                <div class="doctor-grid" id="doctorGrid"></div>
+            </div>
+        </main>
+    </div>
+</div>
+<script>
+    const sidebar = document.getElementById('sidebar');
+    document.getElementById('toggleSidebar').addEventListener('click', () => {
+        sidebar.classList.toggle('collapsed');
+    });
+
+    function normalizeDoctor(doctor) {
+        return {
+            id: doctor && doctor.id,
+            name: (doctor && doctor.name) ? doctor.name.trim() : 'New Doctor',
+            specialty: (doctor && doctor.specialty) ? doctor.specialty.trim() : 'General Medicine',
+            services: Array.isArray(doctor && doctor.services)
+                ? doctor.services.map(item => String(item).trim()).filter(Boolean)
+                : String(doctor && doctor.services || '').split(',').map(item => item.trim()).filter(Boolean)
+        };
+    }
+
+    async function getDoctors() {
+        const response = await fetch('/api/doctors');
+        if (!response.ok) throw new Error('Unable to load doctors');
+        return (await response.json()).map(normalizeDoctor);
+    }
+
+    function getInitials(name) {
+        return name.split(' ').filter(Boolean).slice(0, 2).map(word => word[0]).join('').toUpperCase();
+    }
+
+    async function renderDoctorCards() {
+        const doctors = await getDoctors();
+        const grid = document.getElementById('doctorGrid');
+
+        grid.innerHTML = doctors.map((doctor, index) => `
+            <div class="doctor-card" data-id="${doctor.id}" data-name="${doctor.name}" data-specialty="${doctor.specialty}" data-services="${doctor.services.join(',')}">
+                <div class="doctor-header">
+                    <div class="doctor-avatar">${getInitials(doctor.name)}</div>
+                    <div>
+                        <div style="font-weight:800;">${doctor.name}</div>
+                        <div class="specialty">${doctor.specialty}</div>
+                    </div>
+                </div>
+                <ul class="service-list">${doctor.services.map(service => `<li>${service}</li>`).join('')}</ul>
+                <div style="margin-top:12px; display:flex; gap:8px;">
+                    <button type="button" class="row-edit-btn">Edit</button>
+                </div>
+            </div>
+        `).join('');
+
+        attachAdminEvents();
+    }
+
+    function attachAdminEvents() {
+        document.querySelectorAll('.row-edit-btn').forEach((button) => {
+            button.addEventListener('click', function () {
+                const card = this.closest('.doctor-card');
+                getDoctors().then(doctors => {
+                    const doctor = doctors.find(item => String(item.id) === String(card.dataset.id));
+                    if (doctor) openDoctorModal('edit', doctor);
+                }).catch(() => alert('Unable to load doctor data.'));
+            });
+        });
+    }
+
+    function openDoctorModal(mode, doctor) {
+        const modal = document.createElement('div');
+        modal.style.position = 'fixed';
+        modal.style.inset = '0';
+        modal.style.background = 'rgba(15, 23, 42, 0.45)';
+        modal.style.display = 'grid';
+        modal.style.placeItems = 'center';
+        modal.style.zIndex = '1000';
+        modal.innerHTML = `
+            <div style="background:white; width:min(520px,92vw); border-radius:18px; padding:24px; box-shadow:0 18px 45px rgba(15,23,42,0.2);">
+                <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:16px;">
+                    <h3 style="margin:0;">Edit doctor</h3>
+                    <button type="button" class="close-doctor-modal" style="border:none; background:#eff6ff; color:#1d4ed8; border-radius:10px; width:36px; height:36px; cursor:pointer; font-weight:700;">×</button>
+                </div>
+                <form id="doctorForm">
+                    <div style="display:grid; gap:12px;">
+                        <div>
+                            <label style="display:block; margin-bottom:6px; font-weight:600;">Doctor name</label>
+                            <input type="text" name="name" value="${doctor ? doctor.name : ''}" required style="width:100%; border:1px solid #dbeafe; border-radius:10px; padding:10px 12px;">
+                        </div>
+                        <div>
+                            <label style="display:block; margin-bottom:6px; font-weight:600;">Specialty</label>
+                            <input type="text" name="specialty" value="${doctor ? doctor.specialty : ''}" required style="width:100%; border:1px solid #dbeafe; border-radius:10px; padding:10px 12px;">
+                        </div>
+                        <div>
+                            <label style="display:block; margin-bottom:6px; font-weight:600;">Services (comma separated)</label>
+                            <textarea name="services" rows="4" style="width:100%; border:1px solid #dbeafe; border-radius:10px; padding:10px 12px; resize:vertical;">${doctor ? doctor.services.join(', ') : ''}</textarea>
+                        </div>
+                        <button type="submit" style="border:none; background:linear-gradient(135deg, #2563eb, #0ea5e9); color:white; border-radius:12px; padding:12px 16px; font-weight:700; cursor:pointer;">Save changes</button>
+                    </div>
+                </form>
+            </div>
+        `;
+
+        document.body.appendChild(modal);
+        modal.querySelector('.close-doctor-modal').addEventListener('click', () => modal.remove());
+        modal.querySelector('#doctorForm').addEventListener('submit', async function (event) {
+            event.preventDefault();
+            const form = new FormData(this);
+            const name = String(form.get('name') || '').trim();
+            const specialty = String(form.get('specialty') || '').trim();
+            const services = String(form.get('services') || '').split(',').map(item => item.trim()).filter(Boolean);
+
+            if (!name || !specialty) {
+                return;
+            }
+
+            const url = doctor && doctor.id ? `/api/doctors/${doctor.id}` : '/api/doctors';
+            const response = await fetch(url, {
+                method: doctor && doctor.id ? 'PUT' : 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ name, specialty, services: services.join(', ') })
+            });
+            if (!response.ok) {
+                alert('The doctor could not be saved.');
+                return;
+            }
+            await renderDoctorCards();
+            modal.remove();
+        });
+    }
+
+    renderDoctorCards().catch(() => {
+        document.getElementById('doctorGrid').innerHTML = '<p>Unable to load doctors from the database.</p>';
+    });
+</script>
+</body>
+</html>

@@ -1,0 +1,372 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <title>Admin Reports</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css">
+    <style>
+        :root { --bg:#f3f7ff; --sidebar:#0f172a; --sidebar-light:#1e293b; --primary:#2563eb; --card:#fff; --line:#e2e8f0; --text:#0f172a; --muted:#64748b; --success:#16a34a; --warning:#f59e0b; }
+        * { box-sizing: border-box; }
+        body { margin:0; font-family:'Inter',sans-serif; background:var(--bg); color:var(--text); }
+        .app-shell { display:flex; min-height:100vh; }
+        .sidebar { width:270px; background:linear-gradient(180deg, var(--sidebar), var(--sidebar-light)); color:white; padding:22px 18px; position:relative; transition: width 0.25s ease; }
+        .sidebar.collapsed { width: 92px; }
+        .sidebar.collapsed .nav-text, .sidebar.collapsed .brand-name, .sidebar.collapsed .user-meta { display:none; }
+        .brand { display:flex; align-items:center; gap:12px; margin-bottom:28px; padding:14px 10px; border-radius:16px; background:rgba(255,255,255,0.04); }
+        .brand-mark { width:42px; height:42px; border-radius:12px; background:linear-gradient(135deg,#60a5fa,#2563eb); display:grid; place-items:center; }
+        .nav { display:flex; flex-direction:column; gap:10px; }
+        .nav a { color:rgba(255,255,255,0.8); text-decoration:none; display:flex; align-items:center; gap:14px; padding:12px 14px; border-radius:12px; }
+        .nav a.active, .nav a:hover { background:rgba(59,130,246,0.18); color:white; }
+        .logout-wrap { position:absolute; left:18px; right:18px; bottom:18px; }
+        .logout-btn { width:100%; border:none; border-radius:12px; background:rgba(239,68,68,0.14); color:white; padding:12px 14px; font-weight:600; display:flex; align-items:center; justify-content:center; gap:10px; text-decoration:none; }
+        .content { flex:1; }
+        .topbar { display:flex; align-items:center; justify-content:space-between; background:rgba(255,255,255,0.8); padding:18px 26px; border-bottom:1px solid var(--line); }
+        .toggle-btn {
+            width: 42px; height: 42px; border: 1px solid var(--line); background: white; border-radius: 12px; cursor: pointer;
+        }
+        .user-pill { display:flex; align-items:center; gap:12px; background:white; border:1px solid var(--line); border-radius:12px; padding:8px 12px; }
+        .avatar { width:38px; height:38px; border-radius:50%; background:linear-gradient(135deg,#60a5fa,#2563eb); display:grid; place-items:center; color:white; font-weight:700; }
+        .main { padding:26px; }
+        .card { background:var(--card); border:1px solid var(--line); border-radius:18px; padding:20px; }
+        .summary-grid { display:grid; grid-template-columns:repeat(4, minmax(180px, 1fr)); gap:18px; margin-bottom:20px; }
+        .value { font-size:2rem; font-weight:800; }
+        .label { color:var(--muted); }
+        .badge { display:inline-flex; align-items:center; padding:6px 10px; border-radius:999px; font-size:0.72rem; font-weight:700; }
+        .badge.success { background:#dcfce7; color:#166534; }
+        .badge.warning { background:#fef3c7; color:#92400e; }
+        .badge.info { background:#dbeafe; color:#1d4ed8; }
+        table { width:100%; border-collapse:collapse; margin-top:12px; }
+        th, td { padding:14px 12px; text-align:left; border-bottom:1px solid var(--line); }
+        .action-btn, .row-edit-btn { border:none; border-radius:10px; background:#dbeafe; color:#1d4ed8; cursor:pointer; font-weight:700; padding:8px 12px; }
+        .row-edit-btn.save-btn { background:#dcfce7; color:#166534; }
+        input, select { border:1px solid #dbeafe; border-radius:8px; padding:8px 10px; }
+        .success-toast { position:fixed; top:24px; right:24px; z-index:1100; background:#166534; color:white; padding:14px 18px; border-radius:12px; box-shadow:0 12px 30px rgba(15,23,42,0.2); font-weight:700; }
+    </style>
+</head>
+<body>
+<div class="app-shell">
+    <aside class="sidebar" id="sidebar">
+        <div class="brand">
+            <div class="brand-mark"><i class="fa-solid fa-hospital"></i></div>
+            <div class="brand-name">CareConnect</div>
+        </div>
+        <nav class="nav">
+            <a href="/admin/dashboard"><i class="fa-solid fa-gauge"></i><span class="nav-text">Dashboard</span></a>
+            <a href="/admin/patients"><i class="fa-solid fa-user-injured"></i><span class="nav-text">Patients</span></a>
+            <a href="/admin/appointments"><i class="fa-solid fa-calendar-check"></i><span class="nav-text">Appointments</span></a>
+            <a class="active" href="/admin/reports"><i class="fa-solid fa-chart-line"></i><span class="nav-text">Reports</span></a>
+            <a href="/admin/invoices"><i class="fa-solid fa-file-invoice-dollar"></i><span class="nav-text">Invoices</span></a>
+            <a href="/admin/payments"><i class="fa-solid fa-money-bill-wave"></i><span class="nav-text">Payments</span></a>
+            <a href="/admin/doctors"><i class="fa-solid fa-user-doctor"></i><span class="nav-text">Doctors</span></a>
+            <a href="/admin/settings"><i class="fa-solid fa-gear"></i><span class="nav-text">Settings</span></a>
+        </nav>
+        <div class="logout-wrap">
+            <a class="logout-btn" href="/logout"><i class="fa-solid fa-right-from-bracket"></i><span>Logout</span></a>
+        </div>
+    </aside>
+
+    <div class="content">
+        <header class="topbar">
+            <button class="toggle-btn" id="toggleSidebar" aria-label="Toggle sidebar"><i class="fa-solid fa-bars"></i></button>
+            <div style="font-weight:700; font-size:1.1rem;">Hospital Reports</div>
+            <div class="user-pill">
+                <div class="avatar" th:text="${#strings.substring(user.fullName,0,1)}">A</div>
+                <div>
+                    <div style="font-weight:700;" th:text="${user.fullName}">Admin</div>
+                    <div style="font-size:0.72rem; color:var(--muted);">Administrator</div>
+                </div>
+            </div>
+        </header>
+
+        <main class="main">
+            <div id="reportSuccessMessage" class="success-toast" role="status" hidden></div>
+            <section class="summary-grid">
+                <div class="card">
+                    <div class="label">Completed Visit Rate</div>
+                    <div class="value" th:text="${patientCheckIns + '%'}">0%</div>
+                </div>
+                <div class="card">
+                    <div class="label">Approved Report Rate</div>
+                    <div class="value" th:text="${careSatisfaction + '%'}">0%</div>
+                </div>
+                <div class="card">
+                    <div class="label">Appointment Completion Rate</div>
+                    <div class="value" th:text="${dischargeRate + '%'}">0%</div>
+                </div>
+                <div class="card">
+                    <div class="label">Pending Review</div>
+                    <div class="value" th:text="${pendingReview + '%'}">0%</div>
+                </div>
+            </section>
+
+            <section class="card" style="margin-top:20px;">
+                <div style="display:flex; align-items:center; justify-content:space-between; gap:12px; margin-bottom:12px; flex-wrap:wrap;">
+                    <h2 style="margin:0;">Recent Clinical Reports</h2>
+                    <div style="display:flex; gap:10px; flex-wrap:wrap;">
+                        <button type="button" class="action-btn" id="addReportBtn">Add report</button>
+                        <button type="button" class="action-btn" id="toggleReportEdit">Edit reports</button>
+                    </div>
+                </div>
+                <table>
+                    <thead>
+                    <tr>
+                        <th>Report</th>
+                        <th>Department</th>
+                        <th>Patient</th>
+                        <th>Status</th>
+                        <th>Updated</th>
+                        <th>Action</th>
+                    </tr>
+                    </thead>
+                    <tbody></tbody>
+                </table>
+            </section>
+        </main>
+    </div>
+</div>
+<script>
+    const sidebar = document.getElementById('sidebar');
+    document.getElementById('toggleSidebar').addEventListener('click', () => {
+        sidebar.classList.toggle('collapsed');
+    });
+
+    const apiUrl = '/api/reports';
+
+    function showSuccessMessage(message) {
+        const messageBox = document.getElementById('reportSuccessMessage');
+        messageBox.textContent = message;
+        messageBox.hidden = false;
+        window.clearTimeout(showSuccessMessage.timeoutId);
+        showSuccessMessage.timeoutId = window.setTimeout(() => {
+            messageBox.hidden = true;
+        }, 5000);
+    }
+
+    function normalizeReport(report) {
+        return {
+            id: report.id ?? null,
+            title: report.title || 'Untitled report',
+            department: report.department || 'General Medicine',
+            patient: report.patientName || report.patient || 'Unknown Patient',
+            patientName: report.patientName || report.patient || 'Unknown Patient',
+            reportType: report.reportType || 'Medical',
+            description: report.description || report.summary || 'Medical report shared with patient.',
+            status: report.status || 'Pending',
+            date: report.reportDate || report.date || new Date().toISOString().slice(0, 10),
+            reportDate: report.reportDate || report.date || new Date().toISOString().slice(0, 10),
+            sentToUser: Boolean(report.sentToUser),
+            summary: report.summary || 'Report prepared by the medical team.'
+        };
+    }
+
+    async function loadReports() {
+        try {
+            const response = await fetch(apiUrl);
+            if (!response.ok) {
+                throw new Error('Failed to load reports');
+            }
+            const data = await response.json();
+            return Array.isArray(data) ? data.map(normalizeReport) : [];
+        } catch (error) {
+            return [];
+        }
+    }
+
+    async function saveReport(report, id = null) {
+        const method = id === null ? 'POST' : 'PUT';
+        const url = id === null ? apiUrl : `${apiUrl}/${id}`;
+        const payload = {
+            title: report.title,
+            department: report.department,
+            patientName: report.patientName || report.patient,
+            reportType: report.reportType || 'Medical',
+            description: report.description || report.summary || 'Medical report shared with patient.',
+            status: report.status,
+            sentToUser: Boolean(report.sentToUser),
+            summary: report.summary || report.description || 'Medical report shared with patient.',
+            reportDate: report.reportDate || report.date || new Date().toISOString().slice(0, 10)
+        };
+
+        const response = await fetch(url, {
+            method,
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(payload)
+        });
+
+        if (!response.ok) {
+            throw new Error('Unable to save report');
+        }
+
+        return response.json();
+    }
+
+    function openReportDialog(report = null, index = null) {
+        const modal = document.createElement('div');
+        modal.style.position = 'fixed';
+        modal.style.inset = '0';
+        modal.style.background = 'rgba(15, 23, 42, 0.45)';
+        modal.style.display = 'grid';
+        modal.style.placeItems = 'center';
+        modal.style.zIndex = '1000';
+        modal.innerHTML = `
+            <div style="background:white; width:min(520px,92vw); border-radius:18px; padding:24px; box-shadow:0 18px 45px rgba(15,23,42,0.2);">
+                <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:16px;">
+                    <h3 style="margin:0;">${report ? 'Edit report' : 'Add report'}</h3>
+                    <button type="button" class="close-modal" style="border:none; background:#eff6ff; color:#1d4ed8; border-radius:10px; width:36px; height:36px; cursor:pointer; font-weight:700;">×</button>
+                </div>
+                <form id="reportForm">
+                    <div style="display:grid; gap:12px;">
+                        <div>
+                            <label style="display:block; margin-bottom:6px; font-weight:600;">Report title</label>
+                            <input type="text" name="title" value="${report ? report.title : ''}" required style="width:100%; border:1px solid #dbeafe; border-radius:10px; padding:10px 12px;">
+                        </div>
+                        <div>
+                            <label style="display:block; margin-bottom:6px; font-weight:600;">Department</label>
+                            <input type="text" name="department" value="${report ? report.department : ''}" required style="width:100%; border:1px solid #dbeafe; border-radius:10px; padding:10px 12px;">
+                        </div>
+                        <div>
+                            <label style="display:block; margin-bottom:6px; font-weight:600;">Patient</label>
+                            <input type="text" name="patient" value="${report ? (report.patientName || report.patient) : ''}" required style="width:100%; border:1px solid #dbeafe; border-radius:10px; padding:10px 12px;">
+                        </div>
+                        <div>
+                            <label style="display:block; margin-bottom:6px; font-weight:600;">Status</label>
+                            <select name="status" style="width:100%; border:1px solid #dbeafe; border-radius:10px; padding:10px 12px;">
+                                <option value="Approved" ${report && report.status === 'Approved' ? 'selected' : ''}>Approved</option>
+                                <option value="Pending" ${report && report.status === 'Pending' ? 'selected' : ''}>Pending</option>
+                                <option value="Reviewed" ${report && report.status === 'Reviewed' ? 'selected' : ''}>Reviewed</option>
+                            </select>
+                        </div>
+                        <div>
+                            <label style="display:block; margin-bottom:6px; font-weight:600;">Date</label>
+                            <input type="date" name="date" value="${report ? (report.reportDate || report.date) : new Date().toISOString().slice(0,10)}" required style="width:100%; border:1px solid #dbeafe; border-radius:10px; padding:10px 12px;">
+                        </div>
+                        <div>
+                            <label style="display:block; margin-bottom:6px; font-weight:600;">Report details</label>
+                            <textarea name="summary" rows="5" required style="width:100%; border:1px solid #dbeafe; border-radius:10px; padding:10px 12px; resize:vertical;">${report ? (report.summary || report.description || 'Report prepared by the medical team.') : 'Report prepared by the medical team.'}</textarea>
+                        </div>
+                        <button type="submit" style="border:none; background:linear-gradient(135deg, #2563eb, #0ea5e9); color:white; border-radius:12px; padding:12px 16px; font-weight:700; cursor:pointer;">${report ? 'Save changes' : 'Create report'}</button>
+                    </div>
+                </form>
+            </div>
+        `;
+
+        document.body.appendChild(modal);
+        modal.querySelector('.close-modal').addEventListener('click', () => modal.remove());
+        modal.querySelector('#reportForm').addEventListener('submit', async function (event) {
+            event.preventDefault();
+            const formData = new FormData(this);
+            const reportDetails = String(formData.get('summary') || '').trim();
+            const nextReport = {
+                title: String(formData.get('title') || '').trim(),
+                department: String(formData.get('department') || '').trim(),
+                patient: String(formData.get('patient') || '').trim(),
+                patientName: String(formData.get('patient') || '').trim(),
+                reportType: 'Medical',
+                description: reportDetails || 'Report prepared by the medical team.',
+                status: String(formData.get('status') || 'Pending'),
+                date: String(formData.get('date') || new Date().toISOString().slice(0,10)),
+                reportDate: String(formData.get('date') || new Date().toISOString().slice(0,10)),
+                sentToUser: report ? report.sentToUser : false,
+                summary: reportDetails || 'Report prepared by the medical team.'
+            };
+
+            if (!nextReport.title || !nextReport.department || !nextReport.patientName || !reportDetails) {
+                alert('Please add the actual report details before saving.');
+                return;
+            }
+
+            try {
+                await saveReport(nextReport, report ? report.id : null);
+                await renderReports();
+                modal.remove();
+                showSuccessMessage('Report saved successfully.');
+            } catch (error) {
+                alert('Unable to save the report.');
+            }
+        });
+    }
+
+    async function renderReports() {
+        const rows = await loadReports();
+        const tableBody = document.querySelector('tbody');
+        if (!rows.length) {
+            tableBody.innerHTML = `
+                <tr>
+                    <td colspan="6" style="text-align:center; color:#64748b; padding:24px;">No reports available.</td>
+                </tr>
+            `;
+            return;
+        }
+
+        tableBody.innerHTML = rows.map((report, index) => `
+            <tr data-index="${index}" data-id="${report.id || ''}" data-title="${report.title}" data-department="${report.department}" data-patient="${report.patientName}" data-status="${report.status}" data-date="${report.reportDate}" data-sent="${report.sentToUser ? 'true' : 'false'}">
+                <td><span class="cell-text">${report.title}</span></td>
+                <td><span class="cell-text">${report.department}</span></td>
+                <td><span class="cell-text">${report.patientName}</span></td>
+                <td><span class="badge ${report.status === 'Approved' ? 'success' : report.status === 'Reviewed' ? 'info' : 'warning'}">${report.status}</span></td>
+                <td><span class="cell-text">${report.reportDate}</span></td>
+                <td>
+                    <div style="display:flex; gap:8px; flex-wrap:wrap;">
+                        <button type="button" class="row-edit-btn">Edit</button>
+                        <button type="button" class="row-send-btn" data-id="${report.id || ''}" ${report.sentToUser ? 'disabled' : ''} style="border:none; border-radius:10px; background:${report.sentToUser ? '#dcfce7' : '#dbeafe'}; color:${report.sentToUser ? '#166534' : '#1d4ed8'}; font-weight:700; padding:8px 12px; cursor:${report.sentToUser ? 'default' : 'pointer'};">${report.sentToUser ? 'Sent' : 'Send to user'}</button>
+                    </div>
+                </td>
+            </tr>
+        `).join('');
+
+        document.querySelectorAll('.row-edit-btn').forEach(button => {
+            button.addEventListener('click', function () {
+                const row = this.closest('tr');
+                const index = Number(row.dataset.index);
+                loadReports().then(reports => {
+                    const report = reports[index];
+                    if (report) {
+                        openReportDialog(report, index);
+                    }
+                });
+            });
+        });
+
+        document.querySelectorAll('.row-send-btn').forEach(button => {
+            button.addEventListener('click', () => sendReportToUser(button));
+        });
+    }
+
+    async function sendReportToUser(button) {
+        const id = button.dataset.id;
+        if (!id) {
+            alert('This report has no database ID and cannot be sent.');
+            return;
+        }
+
+        button.disabled = true;
+        button.textContent = 'Sending...';
+        try {
+            const reports = await loadReports();
+            const report = reports.find(item => String(item.id) === String(id));
+            if (!report) {
+                throw new Error('Report could not be found');
+            }
+
+            const response = await fetch(`${apiUrl}/${id}/send`, { method: 'POST' });
+            if (!response.ok) {
+                throw new Error('Report could not be sent');
+            }
+            await renderReports();
+            showSuccessMessage('Report sent successfully to the user.');
+        } catch (error) {
+            button.disabled = false;
+            button.textContent = 'Send to user';
+            alert('Unable to send the report to the user. Please try again.');
+        }
+    }
+
+    document.getElementById('addReportBtn').addEventListener('click', () => openReportDialog());
+    document.getElementById('toggleReportEdit').addEventListener('click', () => renderReports());
+    renderReports();
+</script>
+</body>
+</html>

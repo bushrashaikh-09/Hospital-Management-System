@@ -1,0 +1,288 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <title>Admin Appointments</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css">
+    <style>
+        :root { --bg:#f3f7ff; --sidebar:#0f172a; --sidebar-light:#1e293b; --primary:#2563eb; --card:#fff; --line:#e2e8f0; --text:#0f172a; --muted:#64748b; }
+        * { box-sizing: border-box; }
+        body { margin:0; font-family:'Inter',sans-serif; background:var(--bg); color:var(--text); }
+        .app-shell { display:flex; min-height:100vh; }
+        .sidebar { width:270px; background:linear-gradient(180deg, var(--sidebar), var(--sidebar-light)); color:white; padding:22px 18px; position:relative; transition: width 0.25s ease; }
+        .sidebar.collapsed { width: 92px; }
+        .sidebar.collapsed .nav-text, .sidebar.collapsed .brand-name, .sidebar.collapsed .user-meta { display:none; }
+        .brand { display:flex; align-items:center; gap:12px; margin-bottom:28px; padding:14px 10px; border-radius:16px; background:rgba(255,255,255,0.04); }
+        .brand-mark { width:42px; height:42px; border-radius:12px; background:linear-gradient(135deg,#60a5fa,#2563eb); display:grid; place-items:center; }
+        .nav { display:flex; flex-direction:column; gap:10px; }
+        .nav a { color:rgba(255,255,255,0.8); text-decoration:none; display:flex; align-items:center; gap:14px; padding:12px 14px; border-radius:12px; }
+        .nav a.active, .nav a:hover { background:rgba(59,130,246,0.18); color:white; }
+        .logout-wrap { position:absolute; left:18px; right:18px; bottom:18px; }
+        .logout-btn { width:100%; border:none; border-radius:12px; background:rgba(239,68,68,0.14); color:white; padding:12px 14px; font-weight:600; display:flex; align-items:center; justify-content:center; gap:10px; text-decoration:none; }
+        .content { flex:1; }
+        .topbar { display:flex; align-items:center; justify-content:space-between; background:rgba(255,255,255,0.8); padding:18px 26px; border-bottom:1px solid var(--line); }
+        .toggle-btn {
+            width: 42px; height: 42px; border: 1px solid var(--line); background: white; border-radius: 12px; cursor: pointer;
+        }
+        .user-pill { display:flex; align-items:center; gap:12px; background:white; border:1px solid var(--line); border-radius:12px; padding:8px 12px; }
+        .avatar { width:38px; height:38px; border-radius:50%; background:linear-gradient(135deg,#60a5fa,#2563eb); display:grid; place-items:center; color:white; font-weight:700; }
+        .main { padding:26px; }
+        .card { background:var(--card); border:1px solid var(--line); border-radius:18px; padding:20px; }
+        table { width:100%; border-collapse:collapse; margin-top:16px; }
+        th, td { text-align:left; padding:14px 12px; border-bottom:1px solid var(--line); }
+        .badge { display:inline-flex; align-items:center; padding:6px 10px; border-radius:999px; font-size:0.72rem; font-weight:700; }
+        .badge.success { background:#dcfce7; color:#166534; }
+        .badge.warning { background:#fef3c7; color:#92400e; }
+        .booking-notice { display:none; margin-bottom:16px; padding:12px 16px; border:1px solid #86efac; border-radius:10px; background:#f0fdf4; color:#166534; font-weight:600; }
+        .action-btn, .row-edit-btn { border:none; border-radius:10px; background:#dbeafe; color:#1d4ed8; cursor:pointer; font-weight:700; padding:8px 12px; }
+        .row-edit-btn.save-btn { background:#dcfce7; color:#166534; }
+        input, select { border:1px solid #dbeafe; border-radius:8px; padding:8px 10px; }
+    </style>
+</head>
+<body>
+<div class="app-shell">
+    <aside class="sidebar" id="sidebar">
+        <div class="brand">
+            <div class="brand-mark"><i class="fa-solid fa-hospital"></i></div>
+            <div class="brand-name">CareConnect</div>
+        </div>
+        <nav class="nav">
+            <a href="/admin/dashboard"><i class="fa-solid fa-gauge"></i><span class="nav-text">Dashboard</span></a>
+            <a href="/admin/patients"><i class="fa-solid fa-user-injured"></i><span class="nav-text">Patients</span></a>
+            <a class="active" href="/admin/appointments"><i class="fa-solid fa-calendar-check"></i><span class="nav-text">Appointments</span></a>
+            <a href="/admin/reports"><i class="fa-solid fa-chart-line"></i><span class="nav-text">Reports</span></a>
+            <a href="/admin/invoices"><i class="fa-solid fa-file-invoice-dollar"></i><span class="nav-text">Invoices</span></a>
+            <a href="/admin/payments"><i class="fa-solid fa-money-bill-wave"></i><span class="nav-text">Payments</span></a>
+            <a href="/admin/settings"><i class="fa-solid fa-gear"></i><span class="nav-text">Settings</span></a>
+        </nav>
+        <div class="logout-wrap">
+            <a class="logout-btn" href="/logout"><i class="fa-solid fa-right-from-bracket"></i><span>Logout</span></a>
+        </div>
+    </aside>
+
+    <div class="content">
+        <header class="topbar">
+            <button class="toggle-btn" id="toggleSidebar" aria-label="Toggle sidebar"><i class="fa-solid fa-bars"></i></button>
+            <div style="font-weight:700; font-size:1.1rem;">Appointment Schedule</div>
+            <div class="user-pill">
+                <div class="avatar" th:text="${#strings.substring(user.fullName,0,1)}">A</div>
+                <div>
+                    <div style="font-weight:700;" th:text="${user.fullName}">Admin</div>
+                    <div style="font-size:0.72rem; color:var(--muted);">Administrator</div>
+                </div>
+            </div>
+        </header>
+
+        <main class="main">
+            <div id="bookingNotice" class="booking-notice" role="status" aria-live="polite"></div>
+            <div class="card">
+                <div style="display:flex; align-items:center; justify-content:space-between; gap:12px; margin-bottom:12px;">
+                    <h2 style="margin:0;">Appointments</h2>
+                    <button type="button" class="action-btn" id="toggleAppointmentEdit">Edit appointments</button>
+                </div>
+                <table>
+                    <thead>
+                    <tr>
+                        <th>Patient</th>
+                        <th>Doctor</th>
+                        <th>Date</th>
+                        <th>Status</th>
+                        <th>Action</th>
+                    </tr>
+                    </thead>
+                    <tbody id="appointmentTableBody">
+                    </tbody>
+                </table>
+            </div>
+        </main>
+    </div>
+</div>
+<script>
+    const sidebar = document.getElementById('sidebar');
+    let knownAppointmentIds = null;
+    let editingAppointmentId = null;
+    let bookingNoticeTimeoutId = null;
+
+    document.getElementById('toggleSidebar').addEventListener('click', () => {
+        sidebar.classList.toggle('collapsed');
+    });
+
+    function getStatusClass(status) {
+        return status === 'Confirmed' ? 'success' : 'warning';
+    }
+
+    function showBookingNotice(message) {
+        const notice = document.getElementById('bookingNotice');
+        notice.textContent = message;
+        notice.style.display = 'block';
+        window.clearTimeout(bookingNoticeTimeoutId);
+        bookingNoticeTimeoutId = window.setTimeout(() => {
+            notice.style.display = 'none';
+        }, 30000);
+    }
+
+    async function renderAppointments() {
+        const tableBody = document.getElementById('appointmentTableBody');
+
+        try {
+            const response = await fetch('/api/appointments', {
+                method: 'GET',
+                headers: { 'Content-Type': 'application/json' },
+                credentials: 'include'
+            });
+
+            if (!response.ok) {
+                const status = response.status;
+                tableBody.innerHTML = `<tr><td colspan="5" style="text-align:center; color:#b91c1c; padding:24px;">Error loading appointments (Status: ${status}). Please ensure MySQL is running and the database is populated.</td></tr>`;
+                console.error('Appointment fetch failed with status:', status);
+                return;
+            }
+
+            const rows = await response.json();
+
+            const firstLoad = knownAppointmentIds === null;
+            const newBookings = knownAppointmentIds === null
+                ? []
+                : rows.filter(item => !knownAppointmentIds.has(String(item.id)));
+            knownAppointmentIds = new Set(rows.map(item => String(item.id)));
+            const pendingBookings = rows.filter(item => (item.status || 'Pending').toLowerCase() === 'pending');
+            if (newBookings.length) {
+                const firstBooking = newBookings[0];
+                const message = newBookings.length === 1
+                    ? `New appointment booked by ${firstBooking.patientName || 'a patient'} with ${firstBooking.doctorName || 'a doctor'}.`
+                    : `${newBookings.length} new appointments have been booked.`;
+                showBookingNotice(message);
+            } else if (firstLoad && pendingBookings.length) {
+                showBookingNotice(`${pendingBookings.length} pending appointment booking${pendingBookings.length === 1 ? '' : 's'} need review.`);
+            }
+
+            if (!rows.length) {
+                tableBody.innerHTML = `
+                    <tr>
+                        <td colspan="5" style="text-align:center; color:#64748b; padding:24px;">
+                            No appointments booked yet.<br>
+                            <small style="color:#94a3b8;">Seed data is added automatically on startup when the database is empty.</small>
+                        </td>
+                    </tr>
+                `;
+                return;
+            }
+
+            tableBody.innerHTML = rows.map(item => `
+                <tr data-id="${item.id}">
+                    <td>${item.patientName || 'Unknown patient'}</td>
+                    <td>${item.doctorName || 'Unknown doctor'}</td>
+                    <td>${item.appointmentDate || 'N/A'}</td>
+                    <td>
+                        <span class="badge ${getStatusClass(item.status || 'Pending')}">${item.status || 'Pending'}</span>
+                    </td>
+                    <td style="display:flex; gap:8px;">
+                        <button type="button" class="row-edit-btn" data-action="edit" data-id="${item.id}">Edit</button>
+                        <button type="button" class="row-edit-btn" style="background:#fee2e2; color:#dc2626;" data-action="delete" data-id="${item.id}">Delete</button>
+                    </td>
+                </tr>
+            `).join('');
+
+            document.querySelectorAll('.row-edit-btn').forEach(button => {
+                button.addEventListener('click', function () {
+                    if (this.dataset.action === 'delete') {
+                        deleteAppointment.call(this);
+                        return;
+                    }
+
+                    if (this.dataset.action === 'save') {
+                        const selected = rows.find(item => String(item.id) === String(this.dataset.id));
+                        if (!selected) return;
+
+                        const row = this.closest('tr');
+                        const rowInputs = row.querySelectorAll('[data-field]');
+                        const payload = {
+                            ...selected,
+                            appointmentTime: selected.appointmentTime || '',
+                            notes: selected.notes || ''
+                        };
+
+                        rowInputs.forEach(input => {
+                            payload[input.dataset.field] = input.value;
+                        });
+
+                        fetch(`/api/appointments/${selected.id}`, {
+                            method: 'PUT',
+                            headers: { 'Content-Type': 'application/json' },
+                            credentials: 'include',
+                            body: JSON.stringify(payload)
+                        })
+                        .then(async response => {
+                            if (!response.ok) {
+                                const errorText = await response.text();
+                                throw new Error(errorText || 'Save failed');
+                            }
+                            editingAppointmentId = null;
+                            renderAppointments();
+                        })
+                        .catch(error => {
+                            console.error(error);
+                            alert('The appointment could not be saved. Please try again.');
+                        });
+                        return;
+                    }
+
+                    const selected = rows.find(item => String(item.id) === String(this.dataset.id));
+                    if (!selected) return;
+                    editingAppointmentId = String(selected.id);
+
+                    const row = this.closest('tr');
+                    const patientCell = row.children[0];
+                    const doctorCell = row.children[1];
+                    const dateCell = row.children[2];
+                    const statusCell = row.children[3];
+
+                    patientCell.innerHTML = `<input type="text" value="${selected.patientName || ''}" data-field="patientName" style="width:100%; min-width:120px;">`;
+                    doctorCell.innerHTML = `<input type="text" value="${selected.doctorName || ''}" data-field="doctorName" style="width:100%; min-width:140px;">`;
+                    dateCell.innerHTML = `<input type="date" value="${selected.appointmentDate || ''}" data-field="appointmentDate" style="width:100%; min-width:120px;">`;
+                    statusCell.innerHTML = `
+                        <select data-field="status" style="width:100%; min-width:110px;">
+                            <option value="Confirmed" ${selected.status === 'Confirmed' ? 'selected' : ''}>Confirmed</option>
+                            <option value="Pending" ${selected.status === 'Pending' ? 'selected' : ''}>Pending</option>
+                            <option value="Completed" ${selected.status === 'Completed' ? 'selected' : ''}>Completed</option>
+                            <option value="Cancelled" ${selected.status === 'Cancelled' ? 'selected' : ''}>Cancelled</option>
+                        </select>
+                    `;
+
+                    this.textContent = 'Save';
+                    this.dataset.action = 'save';
+                    this.classList.add('save-btn');
+                });
+            });
+        } catch (error) {
+            tableBody.innerHTML = '<tr><td colspan="5" style="text-align:center; color:#b91c1c; padding:24px;">Appointments could not be loaded.</td></tr>';
+            console.error(error);
+        }
+    }
+
+    function deleteAppointment() {
+        const appointmentId = this.dataset.id;
+        if (confirm('Are you sure you want to delete this appointment?')) {
+            fetch(`/api/appointments/${appointmentId}`, {
+                method: 'DELETE',
+                credentials: 'include'
+            })
+            .then(response => {
+                if (!response.ok) throw new Error();
+                renderAppointments();
+            })
+            .catch(() => alert('The appointment could not be deleted. Please try again.'));
+        }
+    }
+
+    document.getElementById('toggleAppointmentEdit').addEventListener('click', renderAppointments);
+    renderAppointments();
+    window.setInterval(() => {
+        if (editingAppointmentId === null) renderAppointments();
+    }, 15000);
+</script>
+</body>
+</html>

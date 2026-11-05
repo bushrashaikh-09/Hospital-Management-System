@@ -1,0 +1,554 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <title>User Dashboard</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css">
+    <style>
+        :root {
+            --bg: #f8fafc;
+            --sidebar: #0f172a;
+            --sidebar-light: #1e293b;
+            --card: #ffffff;
+            --primary: #2563eb;
+            --primary-soft: #dbeafe;
+            --text: #0f172a;
+            --muted: #64748b;
+            --line: #e2e8f0;
+        }
+        * { box-sizing: border-box; }
+        body {
+            margin: 0;
+            font-family: 'Inter', sans-serif;
+            background: linear-gradient(135deg, #dbeafe 0%, #eff6ff 52%, #e0f2fe 100%);
+            color: var(--text);
+        }
+        .app-shell {
+            display: flex;
+            min-height: 100vh;
+        }
+        .sidebar {
+            width: 270px;
+            background: linear-gradient(180deg, var(--sidebar) 0%, var(--sidebar-light) 100%);
+            color: white;
+            padding: 22px 18px;
+            position: relative;
+            transition: width 0.25s ease;
+        }
+        .sidebar.collapsed {
+            width: 92px;
+        }
+        .sidebar.collapsed .nav-text,
+        .sidebar.collapsed .brand-name,
+        .sidebar.collapsed .user-meta {
+            display: none;
+        }
+        .brand {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            margin-bottom: 28px;
+            padding: 14px 10px;
+            border-radius: 16px;
+            background: rgba(255,255,255,0.04);
+            border: 1px solid rgba(255,255,255,0.08);
+        }
+        .brand-mark {
+            width: 42px;
+            height: 42px;
+            border-radius: 12px;
+            background: linear-gradient(135deg, #38bdf8, #2563eb);
+            display: grid;
+            place-items: center;
+            font-size: 18px;
+        }
+        .nav {
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+        }
+        .nav a {
+            color: rgba(255,255,255,0.8);
+            text-decoration: none;
+            display: flex;
+            align-items: center;
+            gap: 14px;
+            padding: 12px 14px;
+            border-radius: 12px;
+            transition: 0.2s ease;
+        }
+        .nav a:hover, .nav a.active {
+            background: rgba(59,130,246,0.18);
+            color: white;
+        }
+        .nav i {
+            width: 18px;
+            text-align: center;
+        }
+        .logout-wrap {
+            position: absolute;
+            left: 18px;
+            right: 18px;
+            bottom: 18px;
+        }
+        .logout-btn {
+            width: 100%;
+            border: none;
+            border-radius: 12px;
+            background: rgba(239,68,68,0.14);
+            color: white;
+            padding: 12px 14px;
+            font-weight: 600;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            justify-content: center;
+            text-decoration: none;
+        }
+        .content { flex: 1; }
+        .topbar {
+            background: rgba(255,255,255,0.8);
+            border-bottom: 1px solid var(--line);
+            padding: 18px 26px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            backdrop-filter: blur(12px);
+        }
+        .toggle-btn {
+            width: 42px;
+            height: 42px;
+            border: 1px solid var(--line);
+            background: white;
+            border-radius: 12px;
+            cursor: pointer;
+        }
+        .user-pill {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            background: white;
+            border: 1px solid var(--line);
+            border-radius: 12px;
+            padding: 8px 12px;
+        }
+        .avatar {
+            width: 38px;
+            height: 38px;
+            border-radius: 50%;
+            background: linear-gradient(135deg, #38bdf8, #2563eb);
+            display: grid;
+            place-items: center;
+            color: white;
+            font-weight: 700;
+        }
+        .main {
+            padding: 26px;
+        }
+        .hero {
+            background: linear-gradient(135deg, #eff6ff 0%, #dbeafe 100%);
+            border: 1px solid #dfe9ff;
+            border-radius: 22px;
+            padding: 28px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 20px;
+            margin-bottom: 26px;
+        }
+        .hero h2 {
+            margin: 0 0 8px;
+            font-size: clamp(1.8rem, 2vw, 2.5rem);
+        }
+        .hero p {
+            margin: 0;
+            color: var(--muted);
+            line-height: 1.7;
+        }
+        .hero .cta {
+            background: linear-gradient(135deg, #2563eb, #0ea5e9);
+            color: white;
+            border: none;
+            border-radius: 12px;
+            padding: 14px 20px;
+            font-weight: 700;
+            cursor: pointer;
+        }
+        .stats {
+            display: grid;
+            grid-template-columns: repeat(3, minmax(180px, 1fr));
+            gap: 18px;
+            margin-bottom: 26px;
+        }
+        .feature-row {
+            display: grid;
+            grid-template-columns: repeat(3, minmax(220px, 1fr));
+            gap: 20px;
+            margin-bottom: 26px;
+        }
+        .feature-card {
+            min-height: 220px;
+        }
+        .section-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 12px;
+            margin-bottom: 16px;
+        }
+        .section-header h3 {
+            margin: 0;
+            font-size: 1.1rem;
+        }
+        .section-header a {
+            color: var(--primary);
+            text-decoration: none;
+            font-weight: 600;
+            font-size: 0.86rem;
+        }
+        .feature-list {
+            list-style: none;
+            margin: 0;
+            padding: 0;
+            display: grid;
+            gap: 12px;
+        }
+        .feature-list li {
+            display: flex;
+            justify-content: space-between;
+            gap: 12px;
+            border: 1px solid var(--line);
+            border-radius: 12px;
+            padding: 12px 14px;
+            background: #f8fafc;
+        }
+        .feature-list .meta {
+            color: var(--muted);
+            font-size: 0.78rem;
+        }
+        .badge {
+            padding: 6px 10px;
+            border-radius: 999px;
+            font-size: 0.72rem;
+            font-weight: 700;
+            background: #dbeafe;
+            color: #1d4ed8;
+        }
+        .card {
+            background: var(--card);
+            border: 1px solid var(--line);
+            border-radius: 18px;
+            padding: 20px;
+            box-shadow: 0 14px 30px rgba(16, 42, 43, .055);
+            transition: transform .2s ease, box-shadow .2s ease;
+        }
+        .card:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 18px 34px rgba(16, 42, 43, .09);
+        }
+        .stat-icon {
+            width: 52px;
+            height: 52px;
+            border-radius: 14px;
+            display: grid;
+            place-items: center;
+            background: var(--primary-soft);
+            color: var(--primary);
+            margin-bottom: 16px;
+        }
+        .stat-label {
+            color: var(--muted);
+            font-size: 0.82rem;
+            margin-bottom: 8px;
+        }
+        .stat-value {
+            font-size: 1.7rem;
+            font-weight: 800;
+        }
+        .summary-grid {
+            display: grid;
+            grid-template-columns: 1.3fr 0.7fr;
+            gap: 20px;
+            margin-top: 14px;
+        }
+        .grid {
+            display: grid;
+            grid-template-columns: 1.2fr 0.8fr;
+            gap: 20px;
+        }
+        .appointments, .next-steps {
+            list-style: none;
+            padding: 0;
+            margin: 18px 0 0;
+            display: grid;
+            gap: 14px;
+        }
+        .appointments li, .next-steps li {
+            padding: 14px 16px;
+            border: 1px solid var(--line);
+            border-radius: 12px;
+            display: flex;
+            justify-content: space-between;
+            gap: 14px;
+        }
+        .time {
+            color: var(--muted);
+            font-size: 0.8rem;
+        }
+        .pill {
+            display: inline-flex;
+            align-items: center;
+            padding: 7px 10px;
+            background: #dbeafe;
+            color: #1d4ed8;
+            border-radius: 999px;
+            font-size: 0.7rem;
+            font-weight: 700;
+        }
+        .care-timeline {
+            display: grid;
+            gap: 12px;
+            margin-top: 16px;
+        }
+        .care-item {
+            display: flex;
+            gap: 14px;
+            align-items: flex-start;
+            border: 1px solid var(--line);
+            border-radius: 12px;
+            padding: 12px 14px;
+            background: #f8fafc;
+        }
+        .care-dot {
+            width: 12px;
+            height: 12px;
+            border-radius: 50%;
+            background: linear-gradient(135deg, #3b82f6, #0ea5e9);
+            margin-top: 6px;
+            flex-shrink: 0;
+        }
+        .care-item strong {
+            display: block;
+            margin-bottom: 4px;
+        }
+        .care-item span {
+            color: var(--muted);
+            font-size: 0.78rem;
+        }
+        .mini-panel {
+            background: linear-gradient(135deg, #eff6ff, #ecfeff);
+            border: 1px solid #dbeafe;
+            border-radius: 18px;
+            padding: 20px;
+        }
+        .mini-panel h4 {
+            margin: 0 0 10px;
+            font-size: 1rem;
+        }
+        .mini-panel .score {
+            font-size: 2rem;
+            font-weight: 800;
+            color: #0f172a;
+        }
+        .mini-panel .small {
+            display: block;
+            color: var(--muted);
+            margin-top: 8px;
+        }
+        @media (max-width: 980px) {
+            .stats, .feature-row, .grid, .summary-grid { grid-template-columns: 1fr; }
+        }
+    </style>
+</head>
+<body>
+<div class="app-shell">
+    <aside class="sidebar" id="sidebar">
+        <div class="brand">
+            <div class="brand-mark"><i class="fa-solid fa-hospital"></i></div>
+            <div class="brand-name">CareConnect</div>
+        </div>
+
+        <nav class="nav">
+            <a class="active" href="/user/dashboard"><i class="fa-solid fa-gauge"></i><span class="nav-text">Dashboard</span></a>
+            <a href="/user/profile"><i class="fa-solid fa-user"></i><span class="nav-text">Profile</span></a>
+            <a href="/user/doctors"><i class="fa-solid fa-user-doctor"></i><span class="nav-text">Doctors</span></a>
+            <a href="/user/appointments"><i class="fa-solid fa-calendar-check"></i><span class="nav-text">Appointments</span></a>
+            <a href="/user/reports"><i class="fa-solid fa-file-medical"></i><span class="nav-text">Reports</span></a>
+            <a href="/user/billing"><i class="fa-solid fa-file-invoice-dollar"></i><span class="nav-text">Billing</span></a>
+            <a href="/user/settings"><i class="fa-solid fa-gear"></i><span class="nav-text">Settings</span></a>
+        </nav>
+
+        <div class="logout-wrap">
+            <a class="logout-btn" href="/logout"><i class="fa-solid fa-right-from-bracket"></i><span>Logout</span></a>
+        </div>
+    </aside>
+
+    <div class="content">
+        <header class="topbar">
+            <button class="toggle-btn" id="toggleSidebar" aria-label="Toggle sidebar"><i class="fa-solid fa-bars"></i></button>
+            <div class="user-pill">
+                <div class="avatar" th:text="${#strings.substring(user.fullName,0,1)}">U</div>
+                <div>
+                    <div style="font-weight:700;" th:text="${user.fullName}">User</div>
+                    <div style="font-size:0.72rem; color: var(--muted);" class="user-meta">Patient Portal</div>
+                </div>
+            </div>
+        </header>
+
+        <main class="main">
+            <section class="hero">
+                <div>
+                    <h2>Hello, <span th:text="${user.fullName}">User</span></h2>
+                    <p>Your health record, appointments, and care plan are organized and ready to review.</p>
+                </div>
+                <button class="cta" id="bookAppointmentBtn">Book appointment</button>
+            </section>
+
+            <section class="stats">
+                <div class="card">
+                    <div class="stat-icon"><i class="fa-solid fa-calendar-day"></i></div>
+                    <div class="stat-label">Upcoming visits</div>
+                    <div class="stat-value" th:text="${upcomingVisits}">0</div>
+                </div>
+                <div class="card">
+                    <div class="stat-icon"><i class="fa-solid fa-heart-pulse"></i></div>
+                    <div class="stat-label">Health score</div>
+                    <div class="stat-value">92%</div>
+                </div>
+                <div class="card">
+                    <div class="stat-icon"><i class="fa-solid fa-file-waveform"></i></div>
+                    <div class="stat-label">Reports</div>
+                    <div class="stat-value" th:text="${reportCount}">0</div>
+                </div>
+            </section>
+
+            <section class="grid">
+                <div class="card">
+                    <h3 style="margin-top:0;">Appointment schedule</h3>
+                    <ul class="appointments">
+                        <li th:each="appointment : ${appointments}">
+                            <div>
+                                <strong th:text="${appointment.department}">Department</strong><br>
+                                <span class="time">
+                                    <span th:text="${appointment.appointmentDate}">Date</span>,
+                                    <span th:text="${appointment.appointmentTime}">Time</span>
+                                </span>
+                            </div>
+                            <span class="pill" th:text="${appointment.status}">Pending</span>
+                        </li>
+                        <li th:if="${#lists.isEmpty(appointments)}">No appointments scheduled.</li>
+                    </ul>
+                </div>
+
+                <div class="card">
+                    <h3 style="margin-top:0;">Quick actions</h3>
+                    <ul class="next-steps">
+                        <li><a href="/user/profile" style="text-decoration:none; color:inherit; display:flex; justify-content:space-between; width:100%;"><span>Update profile</span><i class="fa-solid fa-arrow-right"></i></a></li>
+                        <li><a href="/user/reports" style="text-decoration:none; color:inherit; display:flex; justify-content:space-between; width:100%;"><span>Download reports</span><i class="fa-solid fa-download"></i></a></li>
+                        <li><a href="tel:+18005550101" style="text-decoration:none; color:inherit; display:flex; justify-content:space-between; width:100%;"><span>Contact clinic</span><i class="fa-solid fa-phone"></i></a></li>
+                    </ul>
+                </div>
+            </section>
+        </main>
+    </div>
+</div>
+
+<script>
+    const sidebar = document.getElementById('sidebar');
+    document.getElementById('toggleSidebar').addEventListener('click', () => {
+        sidebar.classList.toggle('collapsed');
+    });
+
+    const userName = document.body.dataset.userName || 'Patient';
+
+    function openAppointmentModal() {
+        const existing = document.getElementById('appointmentModal');
+        if (existing) {
+            existing.remove();
+        }
+
+        const modal = document.createElement('div');
+        modal.id = 'appointmentModal';
+        modal.style.position = 'fixed';
+        modal.style.inset = '0';
+        modal.style.background = 'rgba(15, 23, 42, 0.45)';
+        modal.style.display = 'grid';
+        modal.style.placeItems = 'center';
+        modal.style.zIndex = '1000';
+        modal.innerHTML = `
+            <div style="background:white; width:min(500px, 92vw); border-radius:18px; padding:24px; box-shadow:0 18px 45px rgba(15,23,42,0.2);">
+                <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:16px;">
+                    <h3 style="margin:0;">Book an appointment</h3>
+                    <button type="button" id="closeAppointmentModal" style="border:none; background:#eff6ff; color:#1d4ed8; border-radius:10px; width:36px; height:36px; cursor:pointer; font-weight:700;">×</button>
+                </div>
+                <form id="appointmentForm">
+                    <div style="display:grid; gap:14px;">
+                        <div>
+                            <label style="display:block; margin-bottom:6px; font-weight:600;">Patient</label>
+                            <input type="text" value="${document.body.dataset.userName || 'Patient'}" readonly style="width:100%; border:1px solid #dbeafe; border-radius:10px; padding:10px 12px;">
+                        </div>
+                        <div>
+                            <label style="display:block; margin-bottom:6px; font-weight:600;">Doctor</label>
+                            <select id="doctorSelect" style="width:100%; border:1px solid #dbeafe; border-radius:10px; padding:10px 12px;">
+                                <option value="Dr. Rahul Mehta|Cardiology">Dr. Rahul Mehta</option>
+                                <option value="Dr. Priya Shah|Neurology">Dr. Priya Shah</option>
+                                <option value="Dr. Ananya Nair|Dermatology">Dr. Ananya Nair</option>
+                                <option value="Dr. Karan Singh|Orthopedics">Dr. Karan Singh</option>
+                                <option value="Dr. Meera Joshi|Pediatrics">Dr. Meera Joshi</option>
+                            </select>
+                        </div>
+                        <div style="display:grid; grid-template-columns:1fr 1fr; gap:12px;">
+                            <div>
+                                <label style="display:block; margin-bottom:6px; font-weight:600;">Date</label>
+                                <input type="date" id="appointmentDate" required style="width:100%; border:1px solid #dbeafe; border-radius:10px; padding:10px 12px;">
+                            </div>
+                            <div>
+                                <label style="display:block; margin-bottom:6px; font-weight:600;">Time</label>
+                                <input type="time" id="appointmentTime" required style="width:100%; border:1px solid #dbeafe; border-radius:10px; padding:10px 12px;">
+                            </div>
+                        </div>
+                        <div>
+                            <label style="display:block; margin-bottom:6px; font-weight:600;">Notes</label>
+                            <textarea id="appointmentNotes" rows="3" style="width:100%; border:1px solid #dbeafe; border-radius:10px; padding:10px 12px; resize:vertical;"></textarea>
+                        </div>
+                        <button type="submit" style="border:none; background:linear-gradient(135deg, #2563eb, #0ea5e9); color:white; border-radius:12px; padding:12px 16px; font-weight:700; cursor:pointer;">Confirm booking</button>
+                    </div>
+                </form>
+            </div>
+        `;
+
+        document.body.appendChild(modal);
+        document.getElementById('closeAppointmentModal').addEventListener('click', () => modal.remove());
+        document.getElementById('appointmentForm').addEventListener('submit', async function (event) {
+            event.preventDefault();
+            const patientName = document.body.dataset.userName || 'Patient';
+            const [doctorName, department] = document.getElementById('doctorSelect').value.split('|');
+            const response = await fetch('/api/appointments', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    patientName,
+                    doctorName,
+                    department,
+                    appointmentDate: document.getElementById('appointmentDate').value,
+                    appointmentTime: document.getElementById('appointmentTime').value,
+                    notes: document.getElementById('appointmentNotes').value
+                })
+            });
+            if (!response.ok) {
+                alert('The appointment could not be saved. Please try again.');
+                return;
+            }
+            window.location.href = '/user/appointments';
+        });
+    }
+
+    document.getElementById('bookAppointmentBtn').addEventListener('click', openAppointmentModal);
+    document.body.dataset.userName = "[[${user.fullName}]]";
+</script>
+</body>
+</html>

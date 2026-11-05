@@ -1,0 +1,131 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <title>User Appointments</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css">
+    <style>
+        :root { --bg:#f8fafc; --sidebar:#0f172a; --sidebar-light:#1e293b; --card:#fff; --primary:#2563eb; --line:#e2e8f0; --text:#0f172a; --muted:#64748b; }
+        * { box-sizing: border-box; }
+        body { margin:0; font-family:'Inter',sans-serif; background:var(--bg); color:var(--text); }
+        .app-shell { display:flex; min-height:100vh; }
+        .sidebar { width:270px; background:linear-gradient(180deg, var(--sidebar), var(--sidebar-light)); color:white; padding:22px 18px; position:relative; transition: width 0.25s ease; }
+        .sidebar.collapsed { width: 92px; }
+        .sidebar.collapsed .nav-text, .sidebar.collapsed .brand-name, .sidebar.collapsed .user-meta { display:none; }
+        .brand { display:flex; align-items:center; gap:12px; margin-bottom:28px; padding:14px 10px; border-radius:16px; background:rgba(255,255,255,0.04); }
+        .brand-mark { width:42px; height:42px; border-radius:12px; background:linear-gradient(135deg,#38bdf8,#2563eb); display:grid; place-items:center; }
+        .nav { display:flex; flex-direction:column; gap:10px; }
+        .nav a { color:rgba(255,255,255,0.8); text-decoration:none; display:flex; align-items:center; gap:14px; padding:12px 14px; border-radius:12px; }
+        .nav a.active, .nav a:hover { background:rgba(59,130,246,0.18); color:white; }
+        .logout-wrap { position:absolute; left:18px; right:18px; bottom:18px; }
+        .logout-btn { width:100%; border:none; border-radius:12px; background:rgba(239,68,68,0.14); color:white; padding:12px 14px; font-weight:600; display:flex; align-items:center; justify-content:center; gap:10px; text-decoration:none; }
+        .content { flex:1; }
+        .topbar { display:flex; justify-content:space-between; align-items:center; background:rgba(255,255,255,0.8); padding:18px 26px; border-bottom:1px solid var(--line); }
+        .toggle-btn {
+            width: 42px; height: 42px; border: 1px solid var(--line); background: white; border-radius: 12px; cursor: pointer;
+        }
+        .user-pill { display:flex; align-items:center; gap:12px; background:white; border:1px solid var(--line); border-radius:12px; padding:8px 12px; }
+        .avatar { width:38px; height:38px; border-radius:50%; background:linear-gradient(135deg,#38bdf8,#2563eb); display:grid; place-items:center; color:white; font-weight:700; }
+        .main { padding:26px; }
+        .card { background:var(--card); border:1px solid var(--line); border-radius:18px; padding:20px; }
+        table { width:100%; border-collapse:collapse; margin-top:16px; }
+        th, td { text-align:left; padding:14px 12px; border-bottom:1px solid var(--line); }
+        .badge { display:inline-flex; align-items:center; padding:6px 10px; border-radius:999px; font-size:0.72rem; font-weight:700; }
+        .badge.success { background:#dcfce7; color:#166534; }
+        .badge.warning { background:#fef3c7; color:#92400e; }
+    </style>
+</head>
+<body>
+<div class="app-shell">
+    <aside class="sidebar" id="sidebar">
+        <div class="brand">
+            <div class="brand-mark"><i class="fa-solid fa-hospital"></i></div>
+            <div class="brand-name">CareConnect</div>
+        </div>
+        <nav class="nav">
+            <a href="/user/dashboard"><i class="fa-solid fa-gauge"></i><span class="nav-text">Dashboard</span></a>
+            <a href="/user/profile"><i class="fa-solid fa-user"></i><span class="nav-text">Profile</span></a>
+            <a href="/user/doctors"><i class="fa-solid fa-user-doctor"></i><span class="nav-text">Doctors</span></a>
+            <a class="active" href="/user/appointments"><i class="fa-solid fa-calendar-check"></i><span class="nav-text">Appointments</span></a>
+            <a href="/user/reports"><i class="fa-solid fa-file-medical"></i><span class="nav-text">Reports</span></a>
+            <a href="/user/settings"><i class="fa-solid fa-gear"></i><span class="nav-text">Settings</span></a>
+        </nav>
+        <div class="logout-wrap">
+            <a class="logout-btn" href="/logout"><i class="fa-solid fa-right-from-bracket"></i><span>Logout</span></a>
+        </div>
+    </aside>
+
+    <div class="content">
+        <header class="topbar">
+            <button class="toggle-btn" id="toggleSidebar" aria-label="Toggle sidebar"><i class="fa-solid fa-bars"></i></button>
+            <div style="font-weight:700; font-size:1.1rem;">My Appointments</div>
+            <div class="user-pill">
+                <div class="avatar" th:text="${#strings.substring(user.fullName,0,1)}">U</div>
+                <div>
+                    <div style="font-weight:700;" th:text="${user.fullName}">User</div>
+                    <div style="font-size:0.72rem; color:var(--muted);">Patient Portal</div>
+                </div>
+            </div>
+        </header>
+
+        <main class="main">
+            <div class="card">
+                <h2 style="margin:0;">Appointments</h2>
+                <table>
+                    <thead>
+                    <tr>
+                        <th>Doctor</th>
+                        <th>Date</th>
+                        <th>Time</th>
+                        <th>Status</th>
+                    </tr>
+                    </thead>
+                    <tbody id="appointmentTableBody"></tbody>
+                </table>
+            </div>
+        </main>
+    </div>
+</div>
+<script>
+    const currentUser = '[[${user.fullName}]]';
+    const sidebar = document.getElementById('sidebar');
+
+    document.getElementById('toggleSidebar').addEventListener('click', () => {
+        sidebar.classList.toggle('collapsed');
+    });
+
+    async function renderAppointments() {
+        const tableBody = document.getElementById('appointmentTableBody');
+        const response = await fetch('/api/appointments');
+        if (!response.ok) {
+            tableBody.innerHTML = '<tr><td colspan="4" style="text-align:center; color:#b91c1c; padding:24px;">Appointments could not be loaded.</td></tr>';
+            return;
+        }
+        const items = await response.json();
+
+        if (!items.length) {
+            tableBody.innerHTML = `
+                <tr>
+                    <td colspan="4" style="text-align:center; color:#64748b; padding:24px;">No appointments booked yet.</td>
+                </tr>
+            `;
+            return;
+        }
+
+        tableBody.innerHTML = items.map(item => `
+            <tr>
+                <td>${item.doctorName}</td>
+                <td>${item.appointmentDate}</td>
+                <td>${item.appointmentTime}</td>
+                <td><span class="badge ${item.status === 'Confirmed' ? 'success' : 'warning'}">${item.status}</span></td>
+            </tr>
+        `).join('');
+    }
+
+    renderAppointments();
+</script>
+</body>
+</html>

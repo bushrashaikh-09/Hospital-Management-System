@@ -1,0 +1,225 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <title>User Reports</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.0/jspdf.umd.min.js"></script>
+    <style>
+        :root { --bg:#f8fafc; --sidebar:#0f172a; --sidebar-light:#1e293b; --card:#fff; --primary:#2563eb; --line:#e2e8f0; --text:#0f172a; --muted:#64748b; }
+        * { box-sizing: border-box; }
+        body { margin:0; font-family:'Inter',sans-serif; background:var(--bg); color:var(--text); }
+        .app-shell { display:flex; min-height:100vh; }
+        .sidebar { width:270px; background:linear-gradient(180deg, var(--sidebar), var(--sidebar-light)); color:white; padding:22px 18px; position:relative; transition: width 0.25s ease; }
+        .sidebar.collapsed { width: 92px; }
+        .sidebar.collapsed .nav-text, .sidebar.collapsed .brand-name, .sidebar.collapsed .user-meta { display:none; }
+        .brand { display:flex; align-items:center; gap:12px; margin-bottom:28px; padding:14px 10px; border-radius:16px; background:rgba(255,255,255,0.04); }
+        .brand-mark { width:42px; height:42px; border-radius:12px; background:linear-gradient(135deg,#38bdf8,#2563eb); display:grid; place-items:center; }
+        .nav { display:flex; flex-direction:column; gap:10px; }
+        .nav a { color:rgba(255,255,255,0.8); text-decoration:none; display:flex; align-items:center; gap:14px; padding:12px 14px; border-radius:12px; }
+        .nav a.active, .nav a:hover { background:rgba(59,130,246,0.18); color:white; }
+        .logout-wrap { position:absolute; left:18px; right:18px; bottom:18px; }
+        .logout-btn { width:100%; border:none; border-radius:12px; background:rgba(239,68,68,0.14); color:white; padding:12px 14px; font-weight:600; display:flex; align-items:center; justify-content:center; gap:10px; text-decoration:none; }
+        .content { flex:1; }
+        .topbar { display:flex; justify-content:space-between; align-items:center; background:rgba(255,255,255,0.8); padding:18px 26px; border-bottom:1px solid var(--line); }
+        .toggle-btn {
+            width: 42px; height: 42px; border: 1px solid var(--line); background: white; border-radius: 12px; cursor: pointer;
+        }
+        .user-pill { display:flex; align-items:center; gap:12px; background:white; border:1px solid var(--line); border-radius:12px; padding:8px 12px; }
+        .avatar { width:38px; height:38px; border-radius:50%; background:linear-gradient(135deg,#38bdf8,#2563eb); display:grid; place-items:center; color:white; font-weight:700; }
+        .main { padding:26px; }
+        .grid { display:grid; grid-template-columns:repeat(2, minmax(220px, 1fr)); gap:18px; }
+        .card { background:var(--card); border:1px solid var(--line); border-radius:18px; padding:20px; }
+        .value { font-size:1.8rem; font-weight:800; }
+        .label { color:var(--muted); }
+        .badge { display:inline-flex; align-items:center; padding:6px 10px; border-radius:999px; font-size:0.72rem; font-weight:700; }
+        .badge.success { background:#dcfce7; color:#166534; }
+        .badge.warning { background:#fef3c7; color:#92400e; }
+    </style>
+</head>
+<body th:attr="data-user-name=${user.fullName}">
+<div class="app-shell">
+    <aside class="sidebar" id="sidebar">
+        <div class="brand">
+            <div class="brand-mark"><i class="fa-solid fa-hospital"></i></div>
+            <div class="brand-name">CareConnect</div>
+        </div>
+        <nav class="nav">
+            <a href="/user/dashboard"><i class="fa-solid fa-gauge"></i><span class="nav-text">Dashboard</span></a>
+            <a href="/user/profile"><i class="fa-solid fa-user"></i><span class="nav-text">Profile</span></a>
+            <a href="/user/doctors"><i class="fa-solid fa-user-doctor"></i><span class="nav-text">Doctors</span></a>
+            <a href="/user/appointments"><i class="fa-solid fa-calendar-check"></i><span class="nav-text">Appointments</span></a>
+            <a class="active" href="/user/reports"><i class="fa-solid fa-file-medical"></i><span class="nav-text">Reports</span></a>
+            <a href="/user/settings"><i class="fa-solid fa-gear"></i><span class="nav-text">Settings</span></a>
+        </nav>
+        <div class="logout-wrap">
+            <a class="logout-btn" href="/logout"><i class="fa-solid fa-right-from-bracket"></i><span>Logout</span></a>
+        </div>
+    </aside>
+
+    <div class="content">
+        <header class="topbar">
+            <button class="toggle-btn" id="toggleSidebar" aria-label="Toggle sidebar"><i class="fa-solid fa-bars"></i></button>
+            <div style="font-weight:700; font-size:1.1rem;">My Reports</div>
+            <div class="user-pill">
+                <div class="avatar" th:text="${#strings.substring(user.fullName,0,1)}">U</div>
+                <div>
+                    <div style="font-weight:700;" th:text="${user.fullName}">User</div>
+                    <div style="font-size:0.72rem; color:var(--muted);">Patient Portal</div>
+                </div>
+            </div>
+        </header>
+
+        <main class="main">
+            <section class="grid" id="reportGrid"></section>
+        </main>
+    </div>
+</div>
+<script>
+    const apiUrl = '/api/reports';
+    const currentUserName = (document.body.dataset.userName || '').trim();
+    const sidebar = document.getElementById('sidebar');
+
+    document.getElementById('toggleSidebar').addEventListener('click', () => {
+        sidebar.classList.toggle('collapsed');
+    });
+
+    function normalizeReport(report) {
+        return {
+            id: report.id ?? null,
+            title: report.title || 'Untitled report',
+            department: report.department || 'General Medicine',
+            patientName: report.patientName || report.patient || 'Unknown Patient',
+            patient: report.patientName || report.patient || 'Unknown Patient',
+            status: report.status || 'Pending',
+            date: report.reportDate || report.date || new Date().toISOString().slice(0, 10),
+            reportDate: report.reportDate || report.date || new Date().toISOString().slice(0, 10),
+            sentToUser: Boolean(report.sentToUser),
+            description: report.description || report.summary || 'Routine review completed successfully.',
+            summary: report.summary || report.description || 'Routine review completed successfully.'
+        };
+    }
+
+    async function loadReports() {
+        try {
+            const response = await fetch('/api/reports');
+            if (!response.ok) {
+                throw new Error('Failed to load reports');
+            }
+            const data = await response.json();
+            const reports = Array.isArray(data) ? data.map(normalizeReport) : [];
+            return reports;
+        } catch (error) {
+            return [];
+        }
+    }
+
+    function downloadReport(report) {
+        const reportDetails = [report.description, report.summary]
+            .map(value => (typeof value === 'string' ? value.trim() : ''))
+            .find(value => value.length > 0) || 'Routine review completed successfully.';
+
+        const doc = new window.jspdf.jsPDF({ unit: 'pt', format: 'a4' });
+        const pageWidth = doc.internal.pageSize.getWidth();
+        const pageHeight = doc.internal.pageSize.getHeight();
+        const margin = 48;
+
+        const title = report.title || 'Medical Report';
+        const department = report.department || 'General Medicine';
+        const patient = report.patientName || 'Unknown Patient';
+        const status = report.status || 'Pending';
+        const reportDate = report.reportDate || new Date().toISOString().slice(0, 10);
+
+        doc.setFillColor(15, 23, 42);
+        doc.rect(0, 0, pageWidth, 98, 'F');
+
+        doc.setTextColor(255, 255, 255);
+        doc.setFont('helvetica', 'bold');
+        doc.setFontSize(18);
+        doc.text('CareConnect Medical Center', margin, 34);
+        doc.setFontSize(24);
+        doc.text(title, margin, 64);
+
+        doc.setTextColor(15, 23, 42);
+        doc.setFont('helvetica', 'normal');
+        doc.setFontSize(11);
+
+        const infoY = 130;
+        const infoBlockX = margin;
+        const infoBlockWidth = pageWidth - margin * 2;
+        doc.setDrawColor(226, 232, 240);
+        doc.setFillColor(248, 250, 252);
+        doc.roundedRect(infoBlockX, infoY, infoBlockWidth, 92, 8, 8, 'FD');
+
+        doc.setFont('helvetica', 'bold');
+        doc.text('Department', infoBlockX + 18, infoY + 28);
+        doc.text('Patient', infoBlockX + 260, infoY + 28);
+        doc.text('Report Date', infoBlockX + 18, infoY + 62);
+        doc.text('Status', infoBlockX + 260, infoY + 62);
+
+        doc.setFont('helvetica', 'normal');
+        doc.text(department, infoBlockX + 18, infoY + 44);
+        doc.text(patient, infoBlockX + 260, infoY + 44);
+        doc.text(reportDate, infoBlockX + 18, infoY + 78);
+        doc.text(status, infoBlockX + 260, infoY + 78);
+
+        let currentY = 258;
+        doc.setFont('helvetica', 'bold');
+        doc.setFontSize(14);
+        doc.text('Report Details', margin, currentY);
+        currentY += 18;
+
+        doc.setFont('helvetica', 'normal');
+        doc.setFontSize(11);
+
+        const wrappedDetails = doc.splitTextToSize(reportDetails, pageWidth - margin * 2);
+        for (const line of wrappedDetails) {
+            if (currentY > pageHeight - margin) {
+                doc.addPage();
+                currentY = margin;
+            }
+            doc.text(line, margin, currentY);
+            currentY += 16;
+        }
+
+        doc.save((title || 'report') + '.pdf');
+    }
+
+    async function renderReports() {
+        const reports = await loadReports();
+        const finalReports = reports.filter(report => report.sentToUser === true);
+
+        const grid = document.getElementById('reportGrid');
+        if (!finalReports.length) {
+            grid.innerHTML = '<div class="card"><div class="label">No reports sent yet</div><p style="margin:14px 0 0; color:#64748b;">Your reports will appear here after the admin sends them to you.</p></div>';
+            return;
+        }
+
+        grid.innerHTML = finalReports.map(report => `
+            <div class="card">
+                <div class="label">${report.title}</div>
+                <div class="value" style="font-size:1.4rem; margin-top:10px;">${report.department}</div>
+                <p style="margin:14px 0; color:#64748b;">${report.summary || 'Routine assessment completed.'}</p>
+                <div style="display:flex; justify-content:space-between; align-items:center; gap:12px; margin-top:10px;">
+                    <span class="badge ${report.status === 'Approved' ? 'success' : 'warning'}">${report.status}</span>
+                    <button type="button" data-id="${report.id || ''}" style="border:none; border-radius:10px; background:#dbeafe; color:#1d4ed8; font-weight:700; padding:8px 12px; cursor:pointer;">Download</button>
+                </div>
+            </div>
+        `).join('');
+
+        document.querySelectorAll('button[data-id]').forEach(button => {
+            button.addEventListener('click', () => {
+                const id = button.dataset.id;
+                const report = finalReports.find(item => String(item.id) === String(id));
+                if (report) downloadReport(report);
+            });
+        });
+    }
+
+    renderReports();
+</script>
+</body>
+</html>
